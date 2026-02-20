@@ -2,93 +2,88 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#0b1220" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b1020" />
   <title>XP Tasks</title>
 
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./assets/icon-192.png" />
+  <link rel="apple-touch-icon" href="./assets/icon-192.png" />
 
-  <link rel="stylesheet" href="styles.css" />
-
-  <!-- Chart.js (CDN) -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="./styles.css?v=6.2" />
 </head>
 
 <body>
   <header class="topbar">
-    <div class="topbar__title">
-      <h1>XP Tasks</h1>
-      <div class="sub">Suivi quotidien • XP • Niveaux</div>
+    <button id="menuBtn" class="iconBtn" aria-label="Menu">☰</button>
+    <div class="brand">
+      <div class="brand__title">XP Tasks</div>
+      <div class="brand__sub">Suivi quotidien • XP • Niveaux</div>
     </div>
-    <div class="pill" id="todayDatePill">—</div>
   </header>
 
   <main class="container">
-    <!-- Carte XP -->
-    <section class="card">
-      <div class="row space">
-        <div>
-          <div class="label">XP du jour</div>
-          <div class="xp">
-            <span id="xpValue" class="xp__value">0</span>
-            <span class="xp__unit">XP</span>
-          </div>
+
+    <!-- HERO -->
+    <section class="card hero">
+      <div class="hero__left">
+        <div class="kpiLabel">XP du jour</div>
+        <div class="kpi">
+          <span id="xpValue" class="kpi__value">0</span>
+          <span class="kpi__unit">XP</span>
         </div>
-        <div class="level">
-          <img id="levelImg" class="level__img" src="assets/placeholder.png" alt="Niveau">
-          <div>
-            <div class="label">Niveau</div>
-            <div id="levelLabel" class="level__name">—</div>
+      </div>
+
+      <div class="hero__right">
+        <div class="levelBox">
+          <img id="levelImg" class="levelBox__img" src="./assets/lvl1_larve.png" alt="Niveau" />
+          <div class="levelBox__text">
+            <div class="kpiLabel">Niveau</div>
+            <div id="levelLabel" class="levelBox__label">—</div>
           </div>
         </div>
       </div>
 
-      <button id="closeDayBtn" class="btn primary">
-        Clôturer la journée
-      </button>
-
-      <p class="hint">
-        Astuce : coche tes tâches → l’XP se met à jour automatiquement.
-      </p>
+      <button id="closeDayBtn" class="primaryBtn">Clôturer la journée</button>
+      <div class="hint" id="todayDatePill">Aujourd’hui: —</div>
+      <div class="hint">Astuce : coche tes tâches → l’XP se met à jour automatiquement.</div>
     </section>
 
-    <!-- Liste tâches -->
+    <!-- TASKS -->
     <section class="card">
-      <div class="row space">
-        <h2 class="card__title">Tâches du jour</h2>
-        <button id="resetTodayBtn" class="btn ghost" type="button">Réinitialiser</button>
+      <div class="card__head">
+        <h2>Tâches du jour</h2>
+        <button id="resetTodayBtn" class="ghostBtn">Réinitialiser</button>
+      </div>
+
+      <div class="muted">
+        Pour modifier les tâches et les XP : ouvre <b>app.js</b> → <b>DEFAULT_TASKS</b>.
       </div>
 
       <div id="tasksList" class="tasks"></div>
-
-      <div class="small">
-        Pour modifier les tâches et les XP : ouvre <code>app.js</code> → <code>DEFAULT_TASKS</code>.
-      </div>
     </section>
 
-    <!-- Graph -->
+    <!-- HISTORY -->
     <section class="card">
-      <div class="row space">
-        <h2 class="card__title">Historique XP</h2>
-        <button id="clearHistoryBtn" class="btn danger" type="button">Effacer</button>
+      <div class="card__head">
+        <h2>Historique XP</h2>
+        <button id="clearHistoryBtn" class="dangerBtn">Effacer</button>
       </div>
 
-      <div class="chartWrap">
-        <canvas id="xpChart" height="140"></canvas>
-      </div>
+      <div class="historyWrap">
+        <div id="historyList" class="history"></div>
 
-      <div id="historyList" class="history"></div>
+        <div class="chartCard">
+          <canvas id="xpChart"></canvas>
+        </div>
+      </div>
     </section>
-
-    <footer class="footer">
-      <span class="small">PWA • Stockage local • Offline</span>
-    </footer>
   </main>
 
-  <script src="app.js"></script>
+  <!-- Chart.js (simple) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- App -->
+  <script src="./app.js?v=6.2"></script>
 </body>
 </html>
