@@ -2,88 +2,184 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b1020" />
-  <title>XP Tasks</title>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" href="./assets/icon-192.png" />
   <link rel="apple-touch-icon" href="./assets/icon-192.png" />
 
-  <link rel="stylesheet" href="./styles.css?v=6.2" />
+  <title>XP Tasks</title>
+  <link rel="stylesheet" href="./styles.css?v=7.0.0" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
 
 <body>
   <header class="topbar">
-    <button id="menuBtn" class="iconBtn" aria-label="Menu">☰</button>
     <div class="brand">
-      <div class="brand__title">XP Tasks</div>
-      <div class="brand__sub">Suivi quotidien • XP • Niveaux</div>
+      <button class="iconBtn" id="menuBtn" aria-label="Menu">☰</button>
+      <div>
+        <div class="title">XP Tasks</div>
+        <div class="subtitle">Suivi quotidien • XP • Santé • Niveaux</div>
+      </div>
     </div>
+
+    <nav class="tabs" id="tabs">
+      <button class="tab isActive" data-route="today">Aujourd’hui</button>
+      <button class="tab" data-route="stats">Stats</button>
+      <button class="tab" data-route="settings">Réglages</button>
+    </nav>
   </header>
 
   <main class="container">
+    <!-- ============ PAGE: TODAY ============ -->
+    <section class="page isActive" id="page-today">
+      <div class="card">
+        <div class="row between wrap">
+          <div class="kpi">
+            <div class="kpiLabel">XP du jour</div>
+            <div class="kpiValue"><span id="xpValue">0</span> <span class="kpiUnit">XP</span></div>
+          </div>
 
-    <!-- HERO -->
-    <section class="card hero">
-      <div class="hero__left">
-        <div class="kpiLabel">XP du jour</div>
-        <div class="kpi">
-          <span id="xpValue" class="kpi__value">0</span>
-          <span class="kpi__unit">XP</span>
-        </div>
-      </div>
+          <div class="kpi">
+            <div class="kpiLabel">Santé</div>
+            <div class="kpiValue"><span id="healthValue">100</span><span class="kpiUnit">/100</span></div>
+          </div>
 
-      <div class="hero__right">
-        <div class="levelBox">
-          <img id="levelImg" class="levelBox__img" src="./assets/lvl1_larve.png" alt="Niveau" />
-          <div class="levelBox__text">
-            <div class="kpiLabel">Niveau</div>
-            <div id="levelLabel" class="levelBox__label">—</div>
+          <div class="levelBox">
+            <img id="levelImg" class="levelImg" alt="Niveau" />
+            <div>
+              <div class="kpiLabel">Niveau</div>
+              <div class="levelLabel" id="levelLabel">—</div>
+            </div>
           </div>
         </div>
+
+        <div class="spacer"></div>
+
+        <div class="row between wrap">
+          <div class="pill" id="dayPill">Jour: —</div>
+
+          <div class="row gap">
+            <button class="btn ghost" id="resetDayBtn">Réinitialiser</button>
+            <button class="btn" id="saveDayBtn">Enregistrer</button>
+          </div>
+        </div>
+
+        <div class="hint">
+          ✅ Auto-enregistrement à <strong>4h</strong> si au moins 1 tâche est cochée.  
+          (Tu peux aussi enregistrer à la main avec “Enregistrer”.)
+        </div>
       </div>
 
-      <button id="closeDayBtn" class="primaryBtn">Clôturer la journée</button>
-      <div class="hint" id="todayDatePill">Aujourd’hui: —</div>
-      <div class="hint">Astuce : coche tes tâches → l’XP se met à jour automatiquement.</div>
-    </section>
+      <div class="card">
+        <div class="row between wrap">
+          <div>
+            <h2 class="h2">Tâches du jour</h2>
+            <div class="muted">Coche → XP & Santé se mettent à jour direct.</div>
+          </div>
 
-    <!-- TASKS -->
-    <section class="card">
-      <div class="card__head">
-        <h2>Tâches du jour</h2>
-        <button id="resetTodayBtn" class="ghostBtn">Réinitialiser</button>
+          <div class="row gap">
+            <label class="datePick">
+              <span>Date</span>
+              <input type="date" id="datePicker" />
+            </label>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <div id="tasksList" class="tasks"></div>
       </div>
 
-      <div class="muted">
-        Pour modifier les tâches et les XP : ouvre <b>app.js</b> → <b>DEFAULT_TASKS</b>.
-      </div>
-
-      <div id="tasksList" class="tasks"></div>
-    </section>
-
-    <!-- HISTORY -->
-    <section class="card">
-      <div class="card__head">
-        <h2>Historique XP</h2>
-        <button id="clearHistoryBtn" class="dangerBtn">Effacer</button>
-      </div>
-
-      <div class="historyWrap">
+      <div class="card">
+        <div class="row between wrap">
+          <h2 class="h2">Récap rapide</h2>
+          <button class="btn ghost danger" id="clearHistoryBtn">Effacer l’historique</button>
+        </div>
+        <div class="divider"></div>
         <div id="historyList" class="history"></div>
+      </div>
+    </section>
 
-        <div class="chartCard">
-          <canvas id="xpChart"></canvas>
+    <!-- ============ PAGE: STATS ============ -->
+    <section class="page" id="page-stats">
+      <div class="card">
+        <div class="row between wrap">
+          <h2 class="h2">Graphique (XP + Santé)</h2>
+          <div class="muted">7 / 30 jours</div>
+        </div>
+
+        <div class="row gap wrap">
+          <button class="btn ghost" data-range="7">7 jours</button>
+          <button class="btn ghost isActive" data-range="30">30 jours</button>
+          <button class="btn ghost" data-range="90">90 jours</button>
+        </div>
+
+        <div class="chartWrap">
+          <canvas id="statsChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="h2">Historique détaillé</h2>
+        <div class="divider"></div>
+        <div id="historyTable" class="historyTable"></div>
+      </div>
+    </section>
+
+    <!-- ============ PAGE: SETTINGS ============ -->
+    <section class="page" id="page-settings">
+      <div class="card">
+        <h2 class="h2">Réglages</h2>
+        <div class="divider"></div>
+
+        <div class="settingRow">
+          <div>
+            <div class="settingTitle">Heure de changement de journée</div>
+            <div class="muted">Ex: 4h → à 03:00 tu es encore “sur la journée d’hier”.</div>
+          </div>
+          <input type="number" min="0" max="23" step="1" id="cutoffHour" class="num" />
+        </div>
+
+        <div class="settingRow">
+          <div>
+            <div class="settingTitle">Notifications (sans backend)</div>
+            <div class="muted">
+              On peut faire des rappels <strong>quand l’app est ouverte</strong>.  
+              Les “vraies push” quand l’app est fermée demandent un backend (on fera plus tard).
+            </div>
+          </div>
+          <button class="btn ghost" id="notifBtn">Activer</button>
+        </div>
+
+        <div class="settingRow">
+          <div>
+            <div class="settingTitle">Forcer la mise à jour (cache)</div>
+            <div class="muted">Vide le cache SW et recharge (utile quand GitHub Pages garde l’ancienne version).</div>
+          </div>
+          <button class="btn ghost" id="hardRefreshBtn">Hard refresh</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="h2">Info</h2>
+        <div class="divider"></div>
+        <div class="muted">
+          Version: <strong>7.0.0</strong> • Cache SW: <strong id="swVersionLabel">—</strong>
         </div>
       </div>
     </section>
   </main>
 
-  <!-- Chart.js (simple) -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <div class="toast" id="toast" hidden>
+    <div id="toastText">—</div>
+    <button class="btn small" id="toastBtn" hidden>OK</button>
+  </div>
 
-  <!-- App -->
-  <script src="./app.js?v=6.2"></script>
+  <script src="./app.js?v=7.0.0"></script>
 </body>
 </html>
