@@ -357,12 +357,13 @@ function closeDay(tasks, todayState) {
 async function registerSW() {
   if (!("serviceWorker" in navigator)) return;
   try {
-    await navigator.serviceWorker.register("./sw.js");
+    const reg = await navigator.serviceWorker.register("./sw.js");
+    // Force une vérif d’update au lancement
+    if (reg.update) reg.update();
   } catch (e) {
     console.log("SW registration failed:", e);
   }
 }
-
 /* =========================
    15) INIT
    ========================= */
