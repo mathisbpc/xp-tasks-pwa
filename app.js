@@ -1,611 +1,786 @@
 /* =========================================================
-   XP Tasks PWA - app.js (V7)
-   - Pages (Today/Stats/Settings)
-   - Santé (0..100) qui baisse via malus
-   - Historique XP + Santé
-   - Sélecteur de date (ajout/modif a posteriori)
-   - Auto-rollover à 4h (sans clôturer)
-   - Niveaux calculés automatiquement selon XP max possible
+   XP Tasks PWA — app.js (V7+)
+   - 3 pages (Aujourd’hui / Stats / Réglages)
+   - XP + Santé (0..100)
+   - Niveaux basés sur PROGRESSION des BONUS (pas sur XP brut)
+   - Enregistrement:
+       • manuel (bouton Enregistrer)
+       • auto à l’heure de reset (ex: 4h) SI au moins 1 tâche cochée
+   - Historique + graphique XP & Santé (double axe)
    ========================================================= */
 
-const APP_VERSION = "7.0.0";
+"use strict";
 
-/** =========================
- * 1) TES TÂCHES
- * - xp : points XP (+ ou -)
- * - hp : impact Santé (0 ou négatif). Santé démarre à 100 et ne dépasse jamais 100.
- * ========================= */
+/* =========================
+   1) VERSION (cache bust)
+   ========================= */
+const APP_VERSION = "7.1.1"; // change ça si tu veux forcer une nouvelle version visible
+const SW_CACHE_VERSION = "v7.1.1"; // affichage (le vrai cache est géré par sw.js)
+
+/* =========================
+   2) TASKS (XP + SANTÉ)
+   - xp : points
+   - hp : impact santé (négatif = baisse, positif = remonte, clamp 0..100)
+   ========================= */
 const DEFAULT_TASKS = [
-  { id: "sleep_good",    icon: "😴", title: "Dormir > 7h30",       desc: "", xp: +40, hp: 0 },
-  { id: "make_bed",      icon: "🛏️", title: "Faire son lit",        desc: "", xp: +10, hp: 0 },
-  { id: "fruit",         icon: "🍎", title: "Fruit",               desc: "", xp: +10, hp: 0 },
-  { id: "sport",         icon: "🏃‍♂️", title: "Sport",              desc: "", xp: +50, hp: 0 },
-  { id: "work_perf",     icon: "💻", title: "Perf au taff",        desc: "", xp: +30, hp: 0 },
-  { id: "balanced_rest", icon: "🐟🥗", title: "Repos équilibré",    desc: "", xp: +30, hp: 0 },
-  { id: "piano_10",      icon: "🎹", title: "+10 min de piano",    desc: "", xp: +25, hp: 0 },
-  { id: "combat",        icon: "🥊", title: "Combat",              desc: "", xp: +60, hp: 0 },
-  { id: "protein_snack", icon: "🥚", title: "Collation prot’",     desc: "", xp: +10, hp: 0 },
-  { id: "stretch",       icon: "🧘‍♂️", title: "Étirements",        desc: "", xp: +15, hp: 0 },
-  { id: "skincare",      icon: "🧴", title: "Skin care",           desc: "", xp: +10, hp: 0 },
-  { id: "meditation",    icon: "🙏", title: "Méditation",          desc: "", xp: +15, hp: 0 },
-  { id: "reading",       icon: "📚", title: "Lecture",             desc: "", xp: +20, hp: 0 },
-  { id: "social_time",   icon: "🧑‍🤝‍🧑", title: "Social Time",    desc: "", xp: +10, hp: 0 },
+  // bonus
+  { id: "sleep_good",    icon: "😴", title: "Dormir > 7h30",        desc: "", xp: +40, hp: +0 },
+  { id: "make_bed",      icon: "🛏️", title: "Faire son lit",         desc: "", xp: +10, hp: +0 },
+  { id: "fruit",         icon: "🍎", title: "Fruit",                desc: "", xp: +10, hp: +0 },
+  { id: "sport",         icon: "🏃‍♂️", title: "Sport",               desc: "", xp: +50, hp: +0 },
+  { id: "work_perf",     icon: "💻", title: "Perf au taff",         desc: "", xp: +30, hp: +0 },
+  { id: "balanced_rest", icon: "🐟🥗", title: "Repos équilibré",     desc: "", xp: +30, hp: +0 },
+  { id: "piano_10",      icon: "🎹", title: "+10 min de piano",     desc: "", xp: +25, hp: +0 },
+  { id: "combat",        icon: "🥊", title: "Combat",               desc: "", xp: +60, hp: +0 },
+  { id: "protein_snack", icon: "🥚", title: "Collation prot’",      desc: "", xp: +10, hp: +0 },
+  { id: "stretch",       icon: "🧘‍♂️", title: "Étirements",         desc: "", xp: +15, hp: +0 },
+  { id: "skincare",      icon: "🧴", title: "Skin care",            desc: "", xp: +10, hp: +0 },
+  { id: "meditation",    icon: "🙏", title: "Méditation",           desc: "", xp: +15, hp: +0 },
+  { id: "reading",       icon: "📚", title: "Lecture",              desc: "", xp: +20, hp: +0 },
+  { id: "social_time",   icon: "🧑‍🤝‍🧑", title: "Social Time",     desc: "", xp: +10, hp: +0 },
 
-  // Malus (XP négatif + Santé baisse)
-  { id: "sleep_bad",     icon: "🥱", title: "Dormir < 6h",          desc: "", xp: -40, hp: -25 },
-  { id: "junk_food",     icon: "🍔🍟", title: "Junk food",          desc: "", xp: -30, hp: -15 },
-  { id: "alcohol_1",     icon: "🍷", title: "Alcool (< 1 verre)",   desc: "", xp: -10, hp: -10 },
-  { id: "alcohol_2",     icon: "🍷🍺", title: "Alcool (< 2 verres)", desc: "", xp: -20, hp: -20 },
-  { id: "alcohol_3",     icon: "🍾🥂", title: "Alcool (< 3 verres)", desc: "", xp: -70, hp: -35 }
+  // malus (XP négatif + baisse Santé)
+  { id: "sleep_bad",     icon: "🥱", title: "Dormir < 6h",           desc: "", xp: -40, hp: -25 },
+  { id: "junk_food",     icon: "🍔🍟", title: "Junk food",           desc: "", xp: -30, hp: -15 },
+  { id: "alcohol_1",     icon: "🍷", title: "Alcool (< 1 verre)",    desc: "", xp: -10, hp: -10 },
+  { id: "alcohol_2",     icon: "🍷🍺", title: "Alcool (< 2 verres)", desc: "", xp: -20, hp: -18 },
+  { id: "alcohol_3",     icon: "🍾🥂", title: "Alcool (< 3 verres)", desc: "", xp: -70, hp: -35 },
 ];
 
-/** =========================
- * 2) NIVEAUX (10 niveaux)
- * - Seuils basés sur XP max possible du jour (somme des xp positifs)
- * - Ratios inspirés de ce que tu as dit :
- *   Pirate = bien, Apothicaire = très bien, Samuraï = parfait,
- *   Réussite = 100%, Dieu RPG = 110%, Dieu Suprême = 150%
- * ========================= */
-const LEVEL_DEFS = [
-  { key: "lvl1",  label: "Larve 🐛",                 ratio: 0.00, img: "assets/lvl1_larve.png" },
-  { key: "lvl2",  label: "Larve disciplinée 🐜",     ratio: 0.20, img: "assets/lvl2_larve_disciplinee.png" },
-  { key: "lvl3",  label: "Soldat ⚔️",                ratio: 0.35, img: "assets/lvl3_soldat.png" },
-  { key: "lvl4",  label: "Slayer 🗡️",                ratio: 0.60, img: "assets/lvl4_slayer.png" },
-  { key: "lvl5",  label: "Pirate des océans 🏴‍☠️",   ratio: 0.80, img: "assets/lvl5_pirate.png" },
-  { key: "lvl6",  label: "Apothicaire 🧪",           ratio: 0.90, img: "assets/lvl6_apothicaaire.png" },
-  { key: "lvl7",  label: "Samuraï ⛩️🥷",             ratio: 1.00, img: "assets/lvl7_samurai.png" },
-  { key: "lvl8",  label: "Réussite ✅ (100%)",       ratio: 1.00, img: "assets/lvl8_reussite.png" },
-  { key: "lvl9",  label: "Dieu RPG 👑 (110%)",       ratio: 1.10, img: "assets/lvl9_dieu.png" },
-  { key: "lvl10", label: "Dieu Suprême 🔱 (150%)",   ratio: 1.50, img: "assets/lvl9_dieu.png" }
+/* =========================
+   3) NIVEAUX (labels “100%/110%/150%” = style)
+   IMPORTANT :
+   - On calcule une progression p = (XP positif coché) / (XP positif max)  ∈ [0..1]
+   - minP = seuil sur p
+   - Les labels 100/110/150 ne sont PAS mathématiques : juste du texte.
+   ========================= */
+const LEVELS = [
+  { key: "lvl1",  label: "Larve 🐛",                      minP: 0.00,  image: "assets/lvl1_larve.png" },
+  { key: "lvl2",  label: "Larve disciplinée 🐜",          minP: 0.15,  image: "assets/lvl2_larve_disciplinee.png" },
+  { key: "lvl3",  label: "Soldat 🪖",                     minP: 0.35,  image: "assets/lvl3_soldat.png" },
+  { key: "lvl4",  label: "Slayer ⚔️ (correct)",           minP: 0.55,  image: "assets/lvl4_slayer.png" },
+  { key: "lvl5",  label: "Pirate des océans 🏴‍☠️ (bien)",  minP: 0.70,  image: "assets/lvl5_pirate.png" },
+  { key: "lvl6",  label: "Apothicaire 🧪 (très bien)",     minP: 0.80,  image: "assets/lvl6_apothicaaire.png" },
+  { key: "lvl7",  label: "Samuraï ⛩️ (parfait)",           minP: 0.90,  image: "assets/lvl7_samurai.png" },
+  { key: "lvl8",  label: "Réussite ✅ (100%)",             minP: 0.96,  image: "assets/lvl8_reussite.png" },
+  { key: "lvl9",  label: "Dieu RPG 👑 (110%)",             minP: 0.985, image: "assets/lvl9_dieu.png" },
+  { key: "lvl10", label: "Dieu suprême 🔥 (150%)",         minP: 0.995, image: "assets/lvl9_dieu.png" },
 ];
 
-/** =========================
- * 3) STORAGE
- * ========================= */
-const LS = {
-  tasks: "xptasks.tasks.v7",
-  dayStates: "xptasks.dayStates.v7",  // map dateISO -> { checked: {id:bool} }
-  history: "xptasks.history.v7",      // array {date,xp,health,levelKey,levelLabel}
-  settings: "xptasks.settings.v7"     // { cutoffHour, rangeDays }
+/* =========================
+   4) LOCAL STORAGE KEYS
+   ========================= */
+const LS_KEYS = {
+  tasks: "xpTasks.tasks.v7",
+  settings: "xpTasks.settings.v7",
+  // état “jour affiché” (peut être aujourd’hui ou une date passée si tu navigues)
+  view: "xpTasks.view.v7",
+  // map dayKey -> { checked: {id:bool}, saved:boolean, savedAt:number }
+  days: "xpTasks.days.v7",
+  // array historique
+  history: "xpTasks.history.v7",
 };
 
-const $ = (s) => document.querySelector(s);
+/* =========================
+   5) HELPERS
+   ========================= */
+const $ = (sel) => document.querySelector(sel);
 
-let chart = null;
-
-/** =========================
- * 4) UTILITAIRES DATE
- * - journée “logique” selon cutoffHour (ex: 4h)
- * ========================= */
-function pad2(n){ return String(n).padStart(2,"0"); }
-
-function isoFromDate(d){
-  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+function clamp(n, a, b) {
+  return Math.max(a, Math.min(b, n));
 }
 
-function formatFR(iso){
-  const [y,m,d]=iso.split("-");
+function safeParse(json, fallback) {
+  try { return JSON.parse(json); } catch { return fallback; }
+}
+
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+function isoDate(d) {
+  const y = d.getFullYear();
+  const m = pad2(d.getMonth() + 1);
+  const day = pad2(d.getDate());
+  return `${y}-${m}-${day}`;
+}
+
+function formatDateFRFromISO(iso) {
+  const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
 }
 
-function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
-
-function loadJSON(key, fallback){
-  try{
-    const v = localStorage.getItem(key);
-    return v ? JSON.parse(v) : fallback;
-  }catch{ return fallback; }
-}
-function saveJSON(key, value){
-  localStorage.setItem(key, JSON.stringify(value));
+function formatDateLongFRFromISO(iso) {
+  try {
+    const d = new Date(iso + "T00:00:00");
+    return d.toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
+  } catch {
+    return formatDateFRFromISO(iso);
+  }
 }
 
-/** Jour logique selon cutoff */
-function dayKeyNow(cutoffHour){
-  const now = new Date();
-  const cut = Number(cutoffHour ?? 4);
+/**
+ * DayKey = jour logique selon resetHour (ex: 4h)
+ * Si on est à 03:00 et resetHour=4 -> on compte encore “hier”.
+ */
+function computeDayKey(now, resetHour) {
   const d = new Date(now);
-  if (now.getHours() < cut) d.setDate(d.getDate() - 1);
-  return isoFromDate(d);
+  const h = d.getHours();
+  if (h < resetHour) d.setDate(d.getDate() - 1);
+  return isoDate(d);
 }
 
-/** =========================
- * 5) DONNÉES
- * ========================= */
-function loadTasks(){
-  return loadJSON(LS.tasks, DEFAULT_TASKS);
-}
-function saveTasks(tasks){
-  saveJSON(LS.tasks, tasks);
-}
-
-function loadSettings(){
-  return loadJSON(LS.settings, { cutoffHour: 4, rangeDays: 30 });
-}
-function saveSettings(s){
-  saveJSON(LS.settings, s);
+/* =========================
+   6) LOAD/SAVE
+   ========================= */
+function loadTasks() {
+  const saved = localStorage.getItem(LS_KEYS.tasks);
+  const tasks = saved ? safeParse(saved, DEFAULT_TASKS) : DEFAULT_TASKS;
+  localStorage.setItem(LS_KEYS.tasks, JSON.stringify(tasks));
+  return tasks;
 }
 
-function loadDayStates(){
-  return loadJSON(LS.dayStates, {});
-}
-function saveDayStates(map){
-  saveJSON(LS.dayStates, map);
-}
-
-function loadHistory(){
-  return loadJSON(LS.history, []);
-}
-function saveHistory(hist){
-  saveJSON(LS.history, hist);
+function loadSettings() {
+  const fallback = { resetHour: 4 };
+  const saved = localStorage.getItem(LS_KEYS.settings);
+  const s = saved ? safeParse(saved, fallback) : fallback;
+  s.resetHour = clamp(Number(s.resetHour ?? 4), 0, 23);
+  localStorage.setItem(LS_KEYS.settings, JSON.stringify(s));
+  return s;
 }
 
-/** =========================
- * 6) CALCULS XP / SANTÉ / NIVEAU
- * ========================= */
-function getMaxPositiveXp(tasks){
-  return tasks.reduce((sum,t)=> sum + (t.xp>0 ? t.xp : 0), 0);
+function saveSettings(s) {
+  localStorage.setItem(LS_KEYS.settings, JSON.stringify(s));
 }
 
-function buildLevels(tasks){
-  const maxPos = getMaxPositiveXp(tasks);
-  return LEVEL_DEFS.map(def => ({
-    ...def,
-    minXp: Math.round(def.ratio * maxPos)
-  })).sort((a,b)=>a.minXp-b.minXp);
+function loadDaysMap() {
+  const saved = localStorage.getItem(LS_KEYS.days);
+  const map = saved ? safeParse(saved, {}) : {};
+  localStorage.setItem(LS_KEYS.days, JSON.stringify(map));
+  return map;
 }
 
-function calcXp(tasks, checked){
-  return tasks.reduce((sum,t)=> sum + (checked[t.id] ? t.xp : 0), 0);
+function saveDaysMap(map) {
+  localStorage.setItem(LS_KEYS.days, JSON.stringify(map));
 }
 
-function calcHealth(tasks, checked){
-  const delta = tasks.reduce((sum,t)=> sum + (checked[t.id] ? (t.hp||0) : 0), 0);
-  return clamp(100 + delta, 0, 100); // strictement <= 100
+function loadHistory() {
+  const saved = localStorage.getItem(LS_KEYS.history);
+  const h = saved ? safeParse(saved, []) : [];
+  localStorage.setItem(LS_KEYS.history, JSON.stringify(h));
+  return h;
 }
 
-function getLevel(levels, xp){
-  let current = levels[0];
-  for (const L of levels){
-    if (xp >= L.minXp) current = L;
+function saveHistory(h) {
+  localStorage.setItem(LS_KEYS.history, JSON.stringify(h));
+}
+
+function loadView() {
+  const saved = localStorage.getItem(LS_KEYS.view);
+  const fallback = { dayKey: null }; // null => aujourd’hui logique
+  const v = saved ? safeParse(saved, fallback) : fallback;
+  localStorage.setItem(LS_KEYS.view, JSON.stringify(v));
+  return v;
+}
+
+function saveView(v) {
+  localStorage.setItem(LS_KEYS.view, JSON.stringify(v));
+}
+
+/* =========================
+   7) CALCULS XP / SANTÉ / PROGRESSION / NIVEAU
+   ========================= */
+function anyChecked(checked) {
+  return Object.values(checked || {}).some(Boolean);
+}
+
+function calcXp(tasks, checked) {
+  let total = 0;
+  for (const t of tasks) {
+    if (checked?.[t.id]) total += Number(t.xp || 0);
+  }
+  return total;
+}
+
+function calcHealth(tasks, checked) {
+  let health = 100;
+  for (const t of tasks) {
+    if (checked?.[t.id]) health += Number(t.hp || 0);
+  }
+  // strictement ≤ 100 + clamp 0..100
+  return clamp(health, 0, 100);
+}
+
+function maxPositiveXp(tasks) {
+  return tasks.reduce((s, t) => (Number(t.xp) > 0 ? s + Number(t.xp) : s), 0);
+}
+
+function checkedPositiveXp(tasks, checked) {
+  return tasks.reduce((s, t) => {
+    if (Number(t.xp) > 0 && checked?.[t.id]) return s + Number(t.xp);
+    return s;
+  }, 0);
+}
+
+/** progression p ∈ [0..1] */
+function calcProgress(tasks, checked) {
+  const maxPos = Math.max(1, maxPositiveXp(tasks));
+  const done = checkedPositiveXp(tasks, checked);
+  return clamp(done / maxPos, 0, 1);
+}
+
+function getLevelForProgress(p) {
+  let current = LEVELS[0];
+  for (const lvl of LEVELS) {
+    if (p >= lvl.minP) current = lvl;
   }
   return current;
 }
 
-/** =========================
- * 7) UI
- * ========================= */
-const tabsEl = $("#tabs");
-const pages = {
-  today: $("#page-today"),
-  stats: $("#page-stats"),
-  settings: $("#page-settings")
-};
+/* =========================
+   8) UI REFS (optionnels)
+   ========================= */
+// Tabs / pages
+const tabTodayBtn = $("#tabToday");
+const tabStatsBtn = $("#tabStats");
+const tabSettingsBtn = $("#tabSettings");
 
+const pageToday = $("#pageToday");
+const pageStats = $("#pageStats");
+const pageSettings = $("#pageSettings");
+
+// Today header
 const xpValueEl = $("#xpValue");
 const healthValueEl = $("#healthValue");
 const levelLabelEl = $("#levelLabel");
 const levelImgEl = $("#levelImg");
-const dayPillEl = $("#dayPill");
+const dayKeyLabelEl = $("#dayKeyLabel"); // ex: “Jour: 20/02/2026 (reset à 4h)”
+const infoToastEl = $("#infoToast"); // “Journée enregistrée ✅” (optionnel)
+
+// Date picker
+const dayPickerEl = $("#dayPicker"); // <input type="date"> (optionnel)
+
+// List
 const tasksListEl = $("#tasksList");
-const historyListEl = $("#historyList");
 
-const datePickerEl = $("#datePicker");
-const resetDayBtn = $("#resetDayBtn");
+// Buttons
+const resetTodayBtn = $("#resetTodayBtn");
 const saveDayBtn = $("#saveDayBtn");
-const clearHistoryBtn = $("#clearHistoryBtn");
 
-const statsChartEl = $("#statsChart");
-const historyTableEl = $("#historyTable");
+// Settings
+const resetHourInput = $("#resetHourInput"); // input number
+const hardRefreshBtn = $("#hardRefreshBtn"); // button
 
-const cutoffHourEl = $("#cutoffHour");
-const notifBtn = $("#notifBtn");
-const hardRefreshBtn = $("#hardRefreshBtn");
-const swVersionLabel = $("#swVersionLabel");
+// Stats
+const historyListEl = $("#historyList");
+const chartCanvas = $("#xpHealthChart");
+const range7Btn = $("#range7");
+const range30Btn = $("#range30");
+const range90Btn = $("#range90");
 
-const toastEl = $("#toast");
-const toastTextEl = $("#toastText");
-const toastBtnEl = $("#toastBtn");
+// Footer / debug
+const versionEl = $("#versionLabel");
+const cacheEl = $("#cacheLabel");
 
-function toast(msg, btnText=null, btnCb=null){
-  toastTextEl.textContent = msg;
-  if (btnText){
-    toastBtnEl.hidden = false;
-    toastBtnEl.textContent = btnText;
-    toastBtnEl.onclick = () => { btnCb?.(); hideToast(); };
-  }else{
-    toastBtnEl.hidden = true;
-    toastBtnEl.onclick = null;
+let chart = null;
+let currentRangeDays = 30;
+
+/* =========================
+   9) PAGE / TAB NAV
+   ========================= */
+function showPage(which) {
+  const pages = [
+    { key: "today", el: pageToday, btn: tabTodayBtn },
+    { key: "stats", el: pageStats, btn: tabStatsBtn },
+    { key: "settings", el: pageSettings, btn: tabSettingsBtn },
+  ];
+
+  for (const p of pages) {
+    if (!p.el) continue;
+    const on = p.key === which;
+    p.el.style.display = on ? "" : "none";
+    if (p.btn) p.btn.classList.toggle("active", on);
   }
-  toastEl.hidden = false;
-  setTimeout(hideToast, 4200);
-}
-function hideToast(){ toastEl.hidden = true; }
-
-function setRoute(route){
-  Object.keys(pages).forEach(r => pages[r].classList.toggle("isActive", r===route));
-  tabsEl.querySelectorAll(".tab").forEach(b => b.classList.toggle("isActive", b.dataset.route===route));
 }
 
-function renderTasks(tasks, checked, onToggle){
+/* =========================
+   10) RENDER TASKS
+   ========================= */
+function renderTasks(tasks, checked, onToggle) {
+  if (!tasksListEl) return;
   tasksListEl.innerHTML = "";
-  for (const t of tasks){
+
+  for (const t of tasks) {
     const row = document.createElement("label");
-    row.className = "task";
+    row.className = "taskRow";
+    row.setAttribute("for", `task_${t.id}`);
 
     const left = document.createElement("div");
     left.className = "taskLeft";
 
     const cb = document.createElement("input");
     cb.type = "checkbox";
-    cb.checked = !!checked[t.id];
-    cb.addEventListener("change", () => onToggle(t.id, cb.checked));
+    cb.id = `task_${t.id}`;
+    cb.checked = !!checked?.[t.id];
 
-    const text = document.createElement("div");
+    cb.addEventListener("change", () => {
+      onToggle(t.id, cb.checked);
+    });
+
+    const txt = document.createElement("div");
+    txt.className = "taskText";
+
     const title = document.createElement("div");
     title.className = "taskTitle";
-    title.textContent = `${t.icon ? t.icon+" " : ""}${t.title}`;
+    title.textContent = `${t.icon ? t.icon + " " : ""}${t.title}`;
 
     const meta = document.createElement("div");
     meta.className = "taskMeta";
-    const hp = (t.hp||0);
-    const hpTxt = hp < 0 ? ` • Santé ${hp}` : "";
-    meta.textContent = `${t.desc||""}${hpTxt}`.trim();
+    meta.textContent = t.desc || "";
 
-    text.appendChild(title);
-    if (meta.textContent) text.appendChild(meta);
+    txt.appendChild(title);
+    if (t.desc) txt.appendChild(meta);
 
     left.appendChild(cb);
-    left.appendChild(text);
+    left.appendChild(txt);
 
     const badge = document.createElement("div");
-    badge.className = "badge " + (t.xp>=0 ? "pos" : "neg");
-    badge.textContent = `${t.xp>=0?"+":""}${t.xp} XP`;
+    const xp = Number(t.xp || 0);
+    badge.className = "badge " + (xp >= 0 ? "pos" : "neg");
+    badge.textContent = `${xp >= 0 ? "+" : ""}${xp} XP`;
 
     row.appendChild(left);
     row.appendChild(badge);
+
     tasksListEl.appendChild(row);
   }
 }
 
-function renderTopKPIs(levels, tasks, checked, dateISO){
+/* =========================
+   11) RENDER TOP (XP/HP/LEVEL)
+   ========================= */
+function setImageSafe(imgEl, src) {
+  if (!imgEl) return;
+  imgEl.onerror = () => { imgEl.src = "assets/placeholder.png"; };
+  imgEl.src = src;
+}
+
+function renderHeader(tasks, settings, dayKey, checked) {
   const xp = calcXp(tasks, checked);
-  const health = calcHealth(tasks, checked);
-  const lvl = getLevel(levels, xp);
+  const hp = calcHealth(tasks, checked);
+  const p = calcProgress(tasks, checked);
+  const level = getLevelForProgress(p);
 
-  xpValueEl.textContent = String(xp);
-  healthValueEl.textContent = String(health);
+  if (xpValueEl) xpValueEl.textContent = String(xp);
+  if (healthValueEl) healthValueEl.textContent = String(hp);
 
-  levelLabelEl.textContent = lvl.label;
-  levelImgEl.onerror = () => { levelImgEl.src = "assets/icon-192.png"; };
-  levelImgEl.src = lvl.img;
+  if (levelLabelEl) levelLabelEl.textContent = level.label;
+  setImageSafe(levelImgEl, level.image);
 
-  dayPillEl.textContent = `Jour: ${formatFR(dateISO)} (reset à ${loadSettings().cutoffHour}h)`;
-}
-
-function upsertHistory(hist, entry){
-  const idx = hist.findIndex(h => h.date === entry.date);
-  if (idx>=0) hist[idx] = entry;
-  else hist.push(entry);
-  hist.sort((a,b)=> a.date.localeCompare(b.date));
-  return hist;
-}
-
-function renderHistoryCards(hist){
-  historyListEl.innerHTML = "";
-  const last = [...hist].slice(-7).reverse();
-  if (last.length === 0){
-    historyListEl.innerHTML = `<div class="historyItem">Aucun historique pour l’instant.</div>`;
-    return;
+  if (dayKeyLabelEl) {
+    const fr = formatDateFRFromISO(dayKey);
+    dayKeyLabelEl.textContent = `Jour: ${fr} (reset à ${settings.resetHour}h)`;
   }
-  for (const h of last){
+}
+
+/* =========================
+   12) HISTORY UPSERT + RENDER
+   ========================= */
+function upsertHistory(history, entry) {
+  const idx = history.findIndex((h) => h.dayKey === entry.dayKey);
+  if (idx >= 0) history[idx] = entry;
+  else history.push(entry);
+  history.sort((a, b) => a.dayKey.localeCompare(b.dayKey));
+  return history;
+}
+
+function renderHistory(history) {
+  if (!historyListEl) return;
+
+  historyListEl.innerHTML = "";
+  const last = [...history].slice(-30).reverse();
+
+  for (const h of last) {
     const div = document.createElement("div");
     div.className = "historyItem";
     div.innerHTML = `
-      <div class="historyTop">
-        <div class="historyTitle">${formatFR(h.date)} • <strong>${h.xp} XP</strong></div>
-        <div class="muted">Santé: <strong>${h.health}/100</strong></div>
-      </div>
-      <div class="historySub">${h.levelLabel}</div>
+      <div><strong>${formatDateFRFromISO(h.dayKey)}</strong> • ${h.xp} XP • ${h.health}/100</div>
+      <div>${h.levelLabel}</div>
     `;
+    historyListEl.appendChild(div);
+  }
+
+  if (history.length === 0) {
+    const div = document.createElement("div");
+    div.className = "historyItem";
+    div.textContent = "Aucun historique pour l’instant.";
     historyListEl.appendChild(div);
   }
 }
 
-function renderHistoryTable(hist){
-  historyTableEl.innerHTML = "";
-  if (hist.length === 0){
-    historyTableEl.innerHTML = `<div class="historyItem">Aucun historique.</div>`;
-    return;
-  }
-  const last = [...hist].slice(-60).reverse();
-  for (const h of last){
-    const row = document.createElement("div");
-    row.className = "historyRow";
-    row.innerHTML = `
-      <div>${formatFR(h.date)}</div>
-      <div class="lvl">${h.levelLabel}</div>
-      <div><strong>${h.xp}</strong> XP</div>
-      <div><strong>${h.health}</strong>/100</div>
-    `;
-    historyTableEl.appendChild(row);
-  }
+function sliceHistory(history, daysCount) {
+  const cut = history.slice(-daysCount);
+  return cut;
 }
 
-function renderChart(hist, rangeDays){
-  const cut = hist.slice(-rangeDays);
-  const labels = cut.map(h => formatFR(h.date));
-  const xp = cut.map(h => h.xp);
-  const hp = cut.map(h => h.health);
+function renderChart(history, daysCount) {
+  if (!chartCanvas || typeof Chart === "undefined") return;
+
+  const h = sliceHistory(history, daysCount);
+  const labels = h.map((x) => formatDateFRFromISO(x.dayKey));
+  const xpData = h.map((x) => x.xp);
+  const hpData = h.map((x) => x.health);
 
   if (chart) chart.destroy();
 
-  chart = new Chart(statsChartEl, {
+  chart = new Chart(chartCanvas, {
     type: "line",
     data: {
       labels,
       datasets: [
         {
           label: "XP",
-          data: xp,
-          borderColor: "rgba(119,226,255,0.95)",
-          backgroundColor: "rgba(119,226,255,0.10)",
-          tension: 0.35,
-          yAxisID: "y1"
+          data: xpData,
+          yAxisID: "yXp",
+          tension: 0.25,
         },
         {
           label: "Santé",
-          data: hp,
-          borderColor: "rgba(72,255,181,0.95)",
-          backgroundColor: "rgba(72,255,181,0.10)",
-          tension: 0.35,
-          yAxisID: "y2"
-        }
-      ]
+          data: hpData,
+          yAxisID: "yHp",
+          tension: 0.25,
+        },
+      ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: "rgba(255,255,255,0.75)" } } },
+      plugins: { legend: { display: true } },
       scales: {
-        x: { ticks: { color: "rgba(255,255,255,0.65)" }, grid: { color: "rgba(255,255,255,0.08)" } },
-        y1: {
+        yXp: {
           position: "left",
           ticks: { color: "rgba(255,255,255,0.65)" },
-          grid: { color: "rgba(255,255,255,0.06)" }
+          grid: { color: "rgba(255,255,255,0.08)" },
         },
-        y2: {
+        yHp: {
           position: "right",
           min: 0,
           max: 100,
           ticks: { color: "rgba(255,255,255,0.65)" },
-          grid: { drawOnChartArea: false }
-        }
-      }
-    }
+          grid: { display: false },
+        },
+        x: {
+          ticks: { color: "rgba(255,255,255,0.65)" },
+          grid: { color: "rgba(255,255,255,0.08)" },
+        },
+      },
+    },
   });
 }
 
-/** =========================
- * 8) LOGIQUE JOUR / ÉDITION A POSTERIORI
- * - dayStates[dateISO] = { checked: {id:bool} }
- * ========================= */
-function getCheckedForDate(dayStates, dateISO){
-  return dayStates[dateISO]?.checked || {};
-}
-function setCheckedForDate(dayStates, dateISO, checked){
-  dayStates[dateISO] = { checked };
-}
-
-function hasAnyChecked(checked){
-  return Object.values(checked).some(Boolean);
+/* =========================
+   13) DAY STATE (view day)
+   ========================= */
+function ensureDay(daysMap, dayKey) {
+  if (!daysMap[dayKey]) {
+    daysMap[dayKey] = { checked: {}, saved: false, savedAt: 0 };
+  }
+  if (!daysMap[dayKey].checked) daysMap[dayKey].checked = {};
+  return daysMap[dayKey];
 }
 
-function saveDayToHistory(tasks, levels, hist, dateISO, checked){
-  if (!hasAnyChecked(checked)) return hist; // ✅ “enregistrer seulement si ≥ 1 tâche cochée”
+function toast(msg) {
+  if (!infoToastEl) return;
+  infoToastEl.textContent = msg;
+  infoToastEl.classList.add("show");
+  setTimeout(() => infoToastEl.classList.remove("show"), 900);
+}
+
+/* =========================
+   14) SAVE DAY (manual/auto)
+   ========================= */
+function saveDayToHistory(tasks, settings, history, daysMap, dayKey) {
+  const day = ensureDay(daysMap, dayKey);
+  const checked = day.checked || {};
+
+  // règle: enregistrer seulement si au moins une tâche cochée
+  if (!anyChecked(checked)) return { ok: false, reason: "empty" };
+
   const xp = calcXp(tasks, checked);
   const health = calcHealth(tasks, checked);
-  const lvl = getLevel(levels, xp);
-  const entry = { date: dateISO, xp, health, levelKey: lvl.key, levelLabel: lvl.label };
-  return upsertHistory(hist, entry);
-}
+  const p = calcProgress(tasks, checked);
+  const level = getLevelForProgress(p);
 
-/** Auto-rollover à cutoff : si on change de jour logique, on save l'ancien */
-function autoRollover(tasks, levels, dayStates, hist, settings){
-  const currentDay = dayKeyNow(settings.cutoffHour);
-  const meta = loadJSON("xptasks._meta.v7", { lastDay: currentDay });
-  if (meta.lastDay !== currentDay){
-    // on tente d'enregistrer l'ancien jour
-    const oldChecked = getCheckedForDate(dayStates, meta.lastDay);
-    hist = saveDayToHistory(tasks, levels, hist, meta.lastDay, oldChecked);
-    saveHistory(hist);
-    meta.lastDay = currentDay;
-    saveJSON("xptasks._meta.v7", meta);
-    toast("Nouveau jour ✅ (auto à 4h). Ancien jour enregistré si besoin.");
-  }
-  return hist;
-}
-
-/** =========================
- * 9) SERVICE WORKER / HARD REFRESH
- * ========================= */
-async function registerSW(){
-  if (!("serviceWorker" in navigator)) return;
-  try{
-    const reg = await navigator.serviceWorker.register("./sw.js");
-    swVersionLabel.textContent = "v" + APP_VERSION;
-
-    reg.addEventListener("updatefound", () => {
-      const sw = reg.installing;
-      if (!sw) return;
-      sw.addEventListener("statechange", () => {
-        if (sw.state === "installed" && navigator.serviceWorker.controller){
-          toast("Mise à jour dispo ✅", "Recharger", () => location.reload());
-        }
-      });
-    });
-  }catch(e){
-    console.log("SW registration failed", e);
-  }
-}
-
-async function hardRefresh(){
-  // Désenregistrer SW + vider caches, puis reload
-  try{
-    if ("serviceWorker" in navigator){
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r => r.unregister()));
-    }
-    if (window.caches){
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-    }
-  }catch{}
-  location.reload(true);
-}
-
-/** =========================
- * 10) INIT
- * ========================= */
-function init(){
-  const tasks = loadTasks();
-  saveTasks(tasks);
-
-  const settings = loadSettings();
-  cutoffHourEl.value = settings.cutoffHour;
-
-  const levels = buildLevels(tasks);
-
-  let dayStates = loadDayStates();
-  let hist = loadHistory();
-
-  // meta init
-  const currentDay = dayKeyNow(settings.cutoffHour);
-  const meta = loadJSON("xptasks._meta.v7", { lastDay: currentDay });
-  if (!meta.lastDay) meta.lastDay = currentDay;
-  saveJSON("xptasks._meta.v7", meta);
-
-  // auto rollover au lancement
-  hist = autoRollover(tasks, levels, dayStates, hist, settings);
-
-  // date picker
-  datePickerEl.value = currentDay;
-
-  const renderForDate = (dateISO) => {
-    const checked = getCheckedForDate(dayStates, dateISO);
-    renderTopKPIs(levels, tasks, checked, dateISO);
-
-    renderTasks(tasks, checked, (id, value) => {
-      const newChecked = { ...getCheckedForDate(dayStates, dateISO), [id]: value };
-      setCheckedForDate(dayStates, dateISO, newChecked);
-      saveDayStates(dayStates);
-      renderTopKPIs(levels, tasks, newChecked, dateISO);
-    });
+  const entry = {
+    dayKey,
+    xp,
+    health,
+    progress: p,
+    levelKey: level.key,
+    levelLabel: level.label,
+    savedAt: Date.now(),
   };
 
-  renderForDate(currentDay);
-  renderHistoryCards(hist);
+  const updated = upsertHistory(history, entry);
+  saveHistory(updated);
 
-  // Save day button
-  saveDayBtn.addEventListener("click", () => {
-    const dateISO = datePickerEl.value;
-    const checked = getCheckedForDate(dayStates, dateISO);
-    const before = hist.length;
-    hist = saveDayToHistory(tasks, levels, hist, dateISO, checked);
-    saveHistory(hist);
-    renderHistoryCards(hist);
-    if (hist.length > before) toast("Journée enregistrée ✅");
-    else toast("Rien à enregistrer (aucune tâche cochée).");
-  });
+  day.saved = true;
+  day.savedAt = Date.now();
+  daysMap[dayKey] = day;
+  saveDaysMap(daysMap);
 
-  // Reset day
-  resetDayBtn.addEventListener("click", () => {
-    const dateISO = datePickerEl.value;
-    setCheckedForDate(dayStates, dateISO, {});
-    saveDayStates(dayStates);
-    renderForDate(dateISO);
-    toast("Journée réinitialisée.");
-  });
+  return { ok: true, history: updated };
+}
 
-  // Change date (edit past)
-  datePickerEl.addEventListener("change", () => renderForDate(datePickerEl.value));
+/* =========================
+   15) AUTO-RESET CHECK
+   - si on passe à un nouveau dayKey (selon resetHour),
+     on auto-enregistre l’ancien si nécessaire
+   ========================= */
+function autoResetIfNeeded(tasks, settings, history, daysMap, view) {
+  const now = new Date();
+  const logicalToday = computeDayKey(now, settings.resetHour);
 
-  // Clear history
-  clearHistoryBtn.addEventListener("click", () => {
-    if (!confirm("Effacer tout l’historique ?")) return;
-    saveHistory([]);
-    hist = [];
-    renderHistoryCards(hist);
-    renderHistoryTable(hist);
-    if (chart) chart.destroy();
-    toast("Historique effacé.");
-  });
+  // si on n’a pas de view.dayKey -> on est en “aujourd’hui”
+  const viewed = view.dayKey || logicalToday;
 
-  // Tabs
-  tabsEl.addEventListener("click", (e) => {
-    const btn = e.target.closest(".tab");
-    if (!btn) return;
-    const route = btn.dataset.route;
-    setRoute(route);
+  // si on est sur aujourd’hui: si le dayKey logique a changé => rollover
+  if ((view.dayKey === null || view.dayKey === undefined) && viewed !== logicalToday) {
+    // (normalement viewed == logicalToday) ; sécurité
+    view.dayKey = null;
+    saveView(view);
+    return;
+  }
 
-    // refresh stats on open
-    if (route === "stats"){
-      const s = loadSettings();
-      hist = loadHistory();
-      renderChart(hist, s.rangeDays || 30);
-      renderHistoryTable(hist);
+  // rollover quand le dernier “todayKey” stocké change.
+  // on stocke un marqueur dans settings (lastLogicalDayKey)
+  const lastKey = settings.lastLogicalDayKey || logicalToday;
+  if (lastKey !== logicalToday) {
+    // on tente d’enregistrer le lastKey
+    const lastDay = ensureDay(daysMap, lastKey);
+    if (!lastDay.saved) {
+      saveDayToHistory(tasks, settings, history, daysMap, lastKey);
     }
-  });
+    // update marker
+    settings.lastLogicalDayKey = logicalToday;
+    saveSettings(settings);
 
-  // Range buttons stats
-  $("#page-stats").addEventListener("click", (e) => {
-    const b = e.target.closest("button[data-range]");
-    if (!b) return;
-    $("#page-stats").querySelectorAll("button[data-range]").forEach(x => x.classList.remove("isActive"));
-    b.classList.add("isActive");
-    const s = loadSettings();
-    s.rangeDays = Number(b.dataset.range);
-    saveSettings(s);
-    hist = loadHistory();
-    renderChart(hist, s.rangeDays);
-  });
+    // si on était sur “aujourd’hui” (view.dayKey null), on reste sur aujourd’hui (donc nouveau dayKey)
+    // et on s’assure que la journée courante existe
+    ensureDay(daysMap, logicalToday);
+    saveDaysMap(daysMap);
+  } else {
+    // init marker
+    settings.lastLogicalDayKey = logicalToday;
+    saveSettings(settings);
+  }
+}
 
-  // Settings: cutoff hour
-  cutoffHourEl.addEventListener("change", () => {
-    const s = loadSettings();
-    s.cutoffHour = clamp(Number(cutoffHourEl.value), 0, 23);
-    saveSettings(s);
-    toast("Heure mise à jour. Recharge si besoin.");
-  });
+/* =========================
+   16) SETTINGS UI
+   ========================= */
+function wireSettingsUI(settings) {
+  if (resetHourInput) {
+    resetHourInput.value = String(settings.resetHour);
+    resetHourInput.addEventListener("change", () => {
+      const v = clamp(Number(resetHourInput.value || 4), 0, 23);
+      settings.resetHour = v;
+      saveSettings(settings);
+      toast(`Reset jour = ${v}h ✅`);
+    });
+  }
 
-  // Notifications (sans backend)
-  notifBtn.addEventListener("click", async () => {
-    if (!("Notification" in window)){
-      toast("Notifications non supportées ici.");
-      return;
-    }
-    const perm = await Notification.requestPermission();
-    if (perm === "granted") toast("OK ✅ (rappels possibles quand l’app est ouverte).");
-    else toast("Refusé.");
-  });
+  if (hardRefreshBtn) {
+    hardRefreshBtn.addEventListener("click", async () => {
+      // “vider cache” côté app: unregister SW + caches.delete + reload
+      try {
+        if ("serviceWorker" in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          for (const r of regs) await r.unregister();
+        }
+        if (window.caches) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+      } catch {}
+      location.reload(true);
+    });
+  }
 
-  hardRefreshBtn.addEventListener("click", () => hardRefresh());
+  if (versionEl) versionEl.textContent = `Version: ${APP_VERSION}`;
+  if (cacheEl) cacheEl.textContent = `Cache SW: ${SW_CACHE_VERSION}`;
+}
 
-  // Auto-rollover check toutes les 60s
+/* =========================
+   17) NOTIFICATIONS (sans backend)
+   - iOS Safari/Chrome: très limité
+   - On laisse juste un “requestPermission” si dispo
+   ========================= */
+async function tryEnableNotifications() {
+  if (!("Notification" in window)) return false;
+  if (Notification.permission === "granted") return true;
+  if (Notification.permission === "denied") return false;
+  const p = await Notification.requestPermission();
+  return p === "granted";
+}
+
+/* =========================
+   18) INIT / MAIN LOOP
+   ========================= */
+function init() {
+  const tasks = loadTasks();
+  const settings = loadSettings();
+  const daysMap = loadDaysMap();
+  let history = loadHistory();
+  let view = loadView();
+
+  // auto reset (rollover)
+  autoResetIfNeeded(tasks, settings, history, daysMap, view);
+
+  // compute current logical dayKey
+  const logicalToday = computeDayKey(new Date(), settings.resetHour);
+
+  // if view.dayKey is null => today
+  let currentDayKey = view.dayKey || logicalToday;
+  ensureDay(daysMap, currentDayKey);
+  saveDaysMap(daysMap);
+
+  // Tabs click
+  if (tabTodayBtn) tabTodayBtn.addEventListener("click", () => showPage("today"));
+  if (tabStatsBtn) tabStatsBtn.addEventListener("click", () => showPage("stats"));
+  if (tabSettingsBtn) tabSettingsBtn.addEventListener("click", () => showPage("settings"));
+
+  // default page
+  showPage("today");
+
+  // date picker (optionnel)
+  if (dayPickerEl) {
+    dayPickerEl.value = currentDayKey;
+    dayPickerEl.addEventListener("change", () => {
+      const iso = String(dayPickerEl.value || "").trim();
+      if (!iso) return;
+
+      view.dayKey = iso === logicalToday ? null : iso;
+      saveView(view);
+
+      currentDayKey = view.dayKey || logicalToday;
+      ensureDay(daysMap, currentDayKey);
+      saveDaysMap(daysMap);
+
+      refreshUI();
+    });
+  }
+
+  function refreshUI() {
+    const day = ensureDay(daysMap, currentDayKey);
+    const checked = day.checked || {};
+
+    // header
+    renderHeader(tasks, settings, currentDayKey, checked);
+
+    // tasks list
+    renderTasks(tasks, checked, (taskId, isOn) => {
+      day.checked[taskId] = isOn;
+      daysMap[currentDayKey] = day;
+      saveDaysMap(daysMap);
+
+      renderHeader(tasks, settings, currentDayKey, day.checked);
+    });
+
+    // stats
+    renderHistory(history);
+    renderChart(history, currentRangeDays);
+
+    // picker sync
+    if (dayPickerEl) dayPickerEl.value = currentDayKey;
+  }
+
+  // Buttons
+  if (resetTodayBtn) {
+    resetTodayBtn.addEventListener("click", () => {
+      const day = ensureDay(daysMap, currentDayKey);
+      day.checked = {};
+      day.saved = false;
+      day.savedAt = 0;
+      daysMap[currentDayKey] = day;
+      saveDaysMap(daysMap);
+      refreshUI();
+      toast("Réinitialisé ✅");
+    });
+  }
+
+  if (saveDayBtn) {
+    saveDayBtn.addEventListener("click", () => {
+      const res = saveDayToHistory(tasks, settings, history, daysMap, currentDayKey);
+      if (!res.ok) {
+        toast("Rien à enregistrer (0 tâche cochée)");
+        return;
+      }
+      history = res.history;
+      refreshUI();
+      toast("Journée enregistrée ✅");
+    });
+  }
+
+  // ranges
+  function setRange(n) {
+    currentRangeDays = n;
+    renderChart(history, currentRangeDays);
+    if (range7Btn) range7Btn.classList.toggle("active", n === 7);
+    if (range30Btn) range30Btn.classList.toggle("active", n === 30);
+    if (range90Btn) range90Btn.classList.toggle("active", n === 90);
+  }
+  if (range7Btn) range7Btn.addEventListener("click", () => setRange(7));
+  if (range30Btn) range30Btn.addEventListener("click", () => setRange(30));
+  if (range90Btn) range90Btn.addEventListener("click", () => setRange(90));
+  setRange(30);
+
+  // settings render
+  wireSettingsUI(settings);
+
+  // refresh first time
+  refreshUI();
+
+  // timer: check rollover every 30s
   setInterval(() => {
-    const tasks2 = loadTasks();
-    const levels2 = buildLevels(tasks2);
-    dayStates = loadDayStates();
-    hist = loadHistory();
-    const s = loadSettings();
-    hist = autoRollover(tasks2, levels2, dayStates, hist, s);
+    const latestSettings = loadSettings();
+    const latestDays = loadDaysMap();
+    const latestHistory = loadHistory();
+    const latestView = loadView();
 
-    // si tu es sur la date “du jour logique”, refresh l’affichage
-    const cur = dayKeyNow(s.cutoffHour);
-    if (datePickerEl.value === cur) renderForDate(cur);
-  }, 60000);
+    autoResetIfNeeded(tasks, latestSettings, latestHistory, latestDays, latestView);
 
-  registerSW();
+    // update in-memory references
+    settings.resetHour = latestSettings.resetHour;
+    settings.lastLogicalDayKey = latestSettings.lastLogicalDayKey;
+
+    history = latestHistory;
+
+    const nowLogical = computeDayKey(new Date(), settings.resetHour);
+    const newDayKey = latestView.dayKey || nowLogical;
+
+    // si on est sur “aujourd’hui” et rollover => on switch automatiquement
+    const wasTodayMode = (view.dayKey === null || view.dayKey === undefined);
+    const nowTodayMode = (latestView.dayKey === null || latestView.dayKey === undefined);
+
+    view = latestView;
+
+    if (wasTodayMode && nowTodayMode) {
+      currentDayKey = nowLogical;
+      ensureDay(latestDays, currentDayKey);
+      saveDaysMap(latestDays);
+    } else {
+      currentDayKey = newDayKey;
+      ensureDay(latestDays, currentDayKey);
+      saveDaysMap(latestDays);
+    }
+
+    // update local map ref
+    Object.keys(daysMap).forEach((k) => delete daysMap[k]);
+    Object.assign(daysMap, latestDays);
+
+    refreshUI();
+  }, 30000);
 }
 
 document.addEventListener("DOMContentLoaded", init);
