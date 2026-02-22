@@ -1,7 +1,7 @@
 {
   "name": "XP Tasks",
   "short_name": "XP Tasks",
-  "start_url": "./?v=7.0.0",
+  "start_url": "./?v=7.1.0",
   "scope": "./",
   "display": "standalone",
   "background_color": "#070b18",

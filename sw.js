@@ -1,18 +1,17 @@
 /* XP Tasks - Service Worker */
-const SW_VERSION = "7.0.0";
+const SW_VERSION = "7.1.0";
 const CACHE_NAME = `xp-tasks-cache-${SW_VERSION}`;
 
 const ASSETS = [
   "./",
-  "./index.html",
-  "./styles.css?v=7.0.0",
-  "./app.js?v=7.0.0",
-  "./manifest.webmanifest",
+  "./index.html?v=7.1.0",
+  "./styles.css?v=7.1.0",
+  "./app.js?v=7.1.0",
+  "./manifest.webmanifest?v=7.1.0",
 
   "./assets/icon-192.png",
   "./assets/icon-512.png",
 
-  // Tes images de niveaux (nouveaux noms)
   "./assets/lvl1_larve.png",
   "./assets/lvl2_larve_disciplinee.png",
   "./assets/lvl3_soldat.png",
@@ -42,7 +41,7 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const req = event.request;
 
-  // Toujours réseau pour HTML (évite de rester coincé sur une vieille version)
+  // HTML => réseau d'abord (évite version bloquée)
   if (req.mode === "navigate") {
     event.respondWith((async () => {
       try {
@@ -58,10 +57,11 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Cache-first pour le reste
+  // cache-first pour le reste
   event.respondWith((async () => {
     const cached = await caches.match(req);
     if (cached) return cached;
+
     const res = await fetch(req);
     const cache = await caches.open(CACHE_NAME);
     cache.put(req, res.clone());

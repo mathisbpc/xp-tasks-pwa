@@ -1,7 +1,7 @@
 /* =========================================================
-   XP Tasks PWA - app.js (V7.1)
+   XP Tasks PWA - app.js (V7.1.0) - FIX NAV + LEVELS
    - Pages (Aujourd’hui / Stats / Réglages)
-   - Menu ☰ + tabs
+   - Menu ☰ + tabs OK
    - Santé <= 100 (départ 100, malus)
    - Auto-enregistrement à l’heure réglable (défaut 4h)
    - Niveaux recalibrés (175=8, 200=9, 245=10)
@@ -11,39 +11,33 @@ const APP_VERSION = "7.1.0";
 
 /** =========================
  *  1) TASKS
- *  - xp: points
- *  - health: malus santé (négatif). (Optionnel)
  * ========================= */
 const DEFAULT_TASKS = [
-  { id: "sleep_good",    icon: "😴", title: "Dormir > 7h30",       xp: +40, health: 0 },
-  { id: "make_bed",      icon: "🛏️", title: "Faire son lit",        xp: +10, health: 0 },
-  { id: "fruit",         icon: "🍎", title: "Fruit",               xp: +10, health: 0 },
-  { id: "sport",         icon: "🏃‍♂️", title: "Sport",              xp: +50, health: 0 },
-  { id: "work_perf",     icon: "💻", title: "Perf au taff",        xp: +30, health: 0 },
-  { id: "balanced_rest", icon: "🐟🥗", title: "Repos équilibré",    xp: +30, health: 0 },
-  { id: "piano_10",      icon: "🎹", title: "+10 min de piano",    xp: +25, health: 0 },
-  { id: "combat",        icon: "🥊", title: "Combat",              xp: +60, health: 0 },
-  { id: "protein_snack", icon: "🥚", title: "Collation prot’",     xp: +10, health: 0 },
-  { id: "stretch",       icon: "🧘‍♂️", title: "Étirements",        xp: +15, health: 0 },
-  { id: "skincare",      icon: "🧴", title: "Skin care",           xp: +10, health: 0 },
-  { id: "meditation",    icon: "🙏", title: "Méditation",          xp: +15, health: 0 },
-  { id: "reading",       icon: "📚", title: "Lecture",             xp: +20, health: 0 },
-  { id: "social_time",   icon: "🧑‍🤝‍🧑", title: "Social Time",    xp: +10, health: 0 },
+  { id: "sleep_good",    icon: "😴", title: "Dormir > 7h30",        xp: +40, health: 0 },
+  { id: "make_bed",      icon: "🛏️", title: "Faire son lit",         xp: +10, health: 0 },
+  { id: "fruit",         icon: "🍎", title: "Fruit",                xp: +10, health: 0 },
+  { id: "sport",         icon: "🏃‍♂️", title: "Sport",               xp: +50, health: 0 },
+  { id: "work_perf",     icon: "💻", title: "Perf au taff",         xp: +30, health: 0 },
+  { id: "balanced_rest", icon: "🐟🥗", title: "Repos équilibré",     xp: +30, health: 0 },
+  { id: "piano_10",      icon: "🎹", title: "+10 min de piano",     xp: +25, health: 0 },
+  { id: "combat",        icon: "🥊", title: "Combat",               xp: +60, health: 0 },
+  { id: "protein_snack", icon: "🥚", title: "Collation prot’",      xp: +10, health: 0 },
+  { id: "stretch",       icon: "🧘‍♂️", title: "Étirements",         xp: +15, health: 0 },
+  { id: "skincare",      icon: "🧴", title: "Skin care",            xp: +10, health: 0 },
+  { id: "meditation",    icon: "🙏", title: "Méditation",           xp: +15, health: 0 },
+  { id: "reading",       icon: "📚", title: "Lecture",              xp: +20, health: 0 },
+  { id: "social_time",   icon: "🧑‍🤝‍🧑", title: "Social Time",     xp: +10, health: 0 },
 
-  // malus (XP - et santé -)
-  { id: "sleep_bad",     icon: "🥱", title: "Dormir < 6h",          xp: -40, health: -25 },
-  { id: "junk_food",     icon: "🍔🍟", title: "Junk food",          xp: -30, health: -15 },
-  { id: "alcohol_1",     icon: "🍷", title: "Alcool (< 1 verre)",   xp: -10, health: -5  },
-  { id: "alcohol_2",     icon: "🍷🍺", title: "Alcool (< 2 verres)",xp: -20, health: -10 },
-  { id: "alcohol_3",     icon: "🍾🥂", title: "Alcool (< 3 verres)",xp: -70, health: -25 },
+  // malus
+  { id: "sleep_bad",     icon: "🥱",  title: "Dormir < 6h",           xp: -40, health: -25 },
+  { id: "junk_food",     icon: "🍔🍟", title: "Junk food",           xp: -30, health: -15 },
+  { id: "alcohol_1",     icon: "🍷",  title: "Alcool (< 1 verre)",   xp: -10, health: -5  },
+  { id: "alcohol_2",     icon: "🍷🍺", title: "Alcool (< 2 verres)", xp: -20, health: -10 },
+  { id: "alcohol_3",     icon: "🍾🥂", title: "Alcool (< 3 verres)", xp: -70, health: -25 },
 ];
 
 /** =========================
- *  2) LEVELS (images dans /assets)
- *  Objectif:
- *  - 175 XP => niveau 8
- *  - 200 XP => niveau 9
- *  - 245 XP => niveau 10
+ *  2) LEVELS
  * ========================= */
 const LEVELS = [
   { key: "lvl1",  label: "Larve 🐛",                         minXp: 0,   img: "assets/lvl1_larve.png" },
@@ -64,8 +58,8 @@ const LEVELS = [
 const LS_KEYS = {
   tasks: "xpTasks.tasks.v7",
   settings: "xpTasks.settings.v7",
-  dayStates: "xpTasks.dayStates.v7",   // { [dateISO]: { checked: {id:true}, saved:boolean } }
-  history: "xpTasks.history.v7",       // array [{date, xp, health, levelKey, levelLabel}]
+  dayStates: "xpTasks.dayStates.v7",
+  history: "xpTasks.history.v7",
 };
 
 /** =========================
@@ -74,9 +68,7 @@ const LS_KEYS = {
 const $ = (s) => document.querySelector(s);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-function safeParse(s, fallback) {
-  try { return JSON.parse(s); } catch { return fallback; }
-}
+function safeParse(s, fallback) { try { return JSON.parse(s); } catch { return fallback; } }
 
 function loadTasks() {
   const raw = localStorage.getItem(LS_KEYS.tasks);
@@ -84,7 +76,6 @@ function loadTasks() {
   localStorage.setItem(LS_KEYS.tasks, JSON.stringify(tasks));
   return tasks;
 }
-
 function loadSettings() {
   const fallback = { dayChangeHour: 4, chartRange: 7 };
   const raw = localStorage.getItem(LS_KEYS.settings);
@@ -92,10 +83,7 @@ function loadSettings() {
   localStorage.setItem(LS_KEYS.settings, JSON.stringify(s));
   return s;
 }
-
-function saveSettings(s) {
-  localStorage.setItem(LS_KEYS.settings, JSON.stringify(s));
-}
+function saveSettings(s) { localStorage.setItem(LS_KEYS.settings, JSON.stringify(s)); }
 
 function loadDayStates() {
   const raw = localStorage.getItem(LS_KEYS.dayStates);
@@ -103,10 +91,7 @@ function loadDayStates() {
   localStorage.setItem(LS_KEYS.dayStates, JSON.stringify(map));
   return map;
 }
-
-function saveDayStates(map) {
-  localStorage.setItem(LS_KEYS.dayStates, JSON.stringify(map));
-}
+function saveDayStates(map) { localStorage.setItem(LS_KEYS.dayStates, JSON.stringify(map)); }
 
 function loadHistory() {
   const raw = localStorage.getItem(LS_KEYS.history);
@@ -114,13 +99,9 @@ function loadHistory() {
   localStorage.setItem(LS_KEYS.history, JSON.stringify(arr));
   return arr;
 }
-
-function saveHistory(arr) {
-  localStorage.setItem(LS_KEYS.history, JSON.stringify(arr));
-}
+function saveHistory(arr) { localStorage.setItem(LS_KEYS.history, JSON.stringify(arr)); }
 
 function isoForNowWithDayChangeHour(dayChangeHour) {
-  // Si heure actuelle < dayChangeHour => on considère qu’on est encore “sur la veille”
   const now = new Date();
   const d = new Date(now);
   if (now.getHours() < dayChangeHour) d.setDate(d.getDate() - 1);
@@ -129,12 +110,10 @@ function isoForNowWithDayChangeHour(dayChangeHour) {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
-
 function formatDateFR(iso) {
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
 }
-
 function addDaysISO(iso, delta) {
   const [y, m, d] = iso.split("-").map(Number);
   const dt = new Date(y, m - 1, d);
@@ -144,28 +123,22 @@ function addDaysISO(iso, delta) {
   const dd = String(dt.getDate()).padStart(2, "0");
   return `${yy}-${mm}-${dd}`;
 }
-
 function calcXp(tasks, checked) {
   let total = 0;
   for (const t of tasks) if (checked[t.id]) total += (t.xp || 0);
   return total;
 }
-
 function calcHealth(tasks, checked) {
   let h = 100;
-  for (const t of tasks) if (checked[t.id]) h += (t.health || 0); // health est négatif pour malus
-  return clamp(h, 0, 100); // strictement <=100
+  for (const t of tasks) if (checked[t.id]) h += (t.health || 0);
+  return clamp(h, 0, 100);
 }
-
 function getLevelForXp(xp) {
   let cur = LEVELS[0];
   for (const lvl of LEVELS) if (xp >= lvl.minXp) cur = lvl;
   return cur;
 }
-
-function anyTaskChecked(checked) {
-  return Object.values(checked).some(Boolean);
-}
+function anyTaskChecked(checked) { return Object.values(checked).some(Boolean); }
 
 /** =========================
  *  5) UI REFS
@@ -207,49 +180,57 @@ const rangeLabel = $("#rangeLabel");
 let chart = null;
 
 /** =========================
- *  6) NAV (fix menu + pages)
+ *  6) NAV
  * ========================= */
 function openDrawer() {
-  drawer.classList.remove("hidden");
-  drawerBackdrop.classList.remove("hidden");
-  drawer.setAttribute("aria-hidden", "false");
+  drawer?.classList.remove("hidden");
+  drawerBackdrop?.classList.remove("hidden");
+  drawer?.setAttribute("aria-hidden", "false");
 }
 function closeDrawer() {
-  drawer.classList.add("hidden");
-  drawerBackdrop.classList.add("hidden");
-  drawer.setAttribute("aria-hidden", "true");
+  drawer?.classList.add("hidden");
+  drawerBackdrop?.classList.add("hidden");
+  drawer?.setAttribute("aria-hidden", "true");
 }
-
 function setActiveTab(go) {
-  for (const btn of [tabToday, tabStats, tabSettings]) {
+  [tabToday, tabStats, tabSettings].forEach(btn => {
+    if (!btn) return;
     btn.classList.toggle("active", btn.dataset.go === go);
-  }
+  });
 }
-
 function showPage(go) {
-  pageToday.classList.toggle("hidden", go !== "today");
-  pageStats.classList.toggle("hidden", go !== "stats");
-  pageSettings.classList.toggle("hidden", go !== "settings");
+  // pages
+  pageToday?.classList.toggle("hidden", go !== "today");
+  pageStats?.classList.toggle("hidden", go !== "stats");
+  pageSettings?.classList.toggle("hidden", go !== "settings");
+
   setActiveTab(go);
   closeDrawer();
 }
 
 function wireNav() {
   // Burger
-  burgerBtn?.addEventListener("click", () => {
-    if (drawer.classList.contains("hidden")) openDrawer();
+  burgerBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (drawer?.classList.contains("hidden")) openDrawer();
     else closeDrawer();
   });
-  drawerBackdrop?.addEventListener("click", closeDrawer);
+  drawerBackdrop?.addEventListener("click", (e) => { e.preventDefault(); closeDrawer(); });
 
-  // Drawer buttons
+  // Drawer items
   drawer?.querySelectorAll("[data-go]")?.forEach(btn => {
-    btn.addEventListener("click", () => showPage(btn.dataset.go));
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      showPage(btn.dataset.go);
+    });
   });
 
   // Tabs
   [tabToday, tabStats, tabSettings].forEach(btn => {
-    btn?.addEventListener("click", () => showPage(btn.dataset.go));
+    btn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      showPage(btn.dataset.go);
+    });
   });
 }
 
@@ -269,6 +250,7 @@ function renderTasks(tasks, dayState, onChange) {
 
     const left = document.createElement("div");
     left.className = "taskLeft";
+
     const title = document.createElement("div");
     title.className = "taskTitle";
     title.textContent = `${t.icon ? t.icon + " " : ""}${t.title}`;
@@ -289,6 +271,12 @@ function renderTasks(tasks, dayState, onChange) {
 
     tasksListEl.appendChild(row);
   }
+}
+
+let _settings = null;
+function getSettings() {
+  if (!_settings) _settings = loadSettings();
+  return _settings;
 }
 
 function updateHeader(tasks, dayState, dateISO) {
@@ -367,14 +355,8 @@ function renderChart(history, rangeDays) {
 }
 
 /** =========================
- *  8) DAY SAVE / AUTO SAVE
+ *  8) SAVE / AUTO SAVE
  * ========================= */
-let _settings = null;
-function getSettings() {
-  if (!_settings) _settings = loadSettings();
-  return _settings;
-}
-
 function saveDayIfPossible(tasks, dateISO, dayStatesMap) {
   const dayState = dayStatesMap[dateISO] || { checked: {}, saved: false };
   if (!anyTaskChecked(dayState.checked)) return false;
@@ -404,18 +386,14 @@ function autoSaveTick(tasks, dayStatesMap) {
   const s = getSettings();
   const now = new Date();
   const minute = now.getMinutes();
-
-  // On check souvent, mais on ne “trigger” qu’au moment où on passe l’heure cible (minute 0-2)
   if (now.getHours() === s.dayChangeHour && minute <= 2) {
-    // date actuelle AVANT bascule => c’est la veille “logique”
     const dateISO = isoForNowWithDayChangeHour(s.dayChangeHour);
-    // Sauvegarde uniquement si au moins 1 tâche cochée
     saveDayIfPossible(tasks, dateISO, dayStatesMap);
   }
 }
 
 /** =========================
- *  9) CACHE HARD REFRESH (SW)
+ *  9) HARD REFRESH + SW
  * ========================= */
 async function hardRefresh() {
   try {
@@ -428,14 +406,15 @@ async function hardRefresh() {
       await Promise.all(keys.map(k => caches.delete(k)));
     }
   } finally {
-    location.reload(true);
+    location.reload();
   }
 }
 
 async function registerSW() {
   if (!("serviceWorker" in navigator)) return;
   try {
-    await navigator.serviceWorker.register("./sw.js");
+    // on force un "nouvel URL" pour éviter SW collé
+    await navigator.serviceWorker.register("./sw.js?v=" + APP_VERSION);
   } catch (e) {
     console.log("SW registration failed:", e);
   }
@@ -455,8 +434,6 @@ function init() {
   dayChangeHourInput.value = String(settings.dayChangeHour);
 
   let dayStatesMap = loadDayStates();
-
-  // date éditée (permet “ajouter à posteriori” en naviguant avec ◀ ▶)
   let currentDateISO = isoForNowWithDayChangeHour(settings.dayChangeHour);
 
   function getOrCreateDayState(dateISO) {
@@ -464,9 +441,7 @@ function init() {
     return dayStatesMap[dateISO];
   }
 
-  function persistDayStates() {
-    saveDayStates(dayStatesMap);
-  }
+  function persistDayStates() { saveDayStates(dayStatesMap); }
 
   function rerenderToday() {
     const st = getOrCreateDayState(currentDateISO);
@@ -477,17 +452,19 @@ function init() {
     updateHeader(tasks, st, currentDateISO);
   }
 
-  // Buttons day change
-  prevDayBtn.addEventListener("click", () => {
+  prevDayBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
     currentDateISO = addDaysISO(currentDateISO, -1);
     rerenderToday();
   });
-  nextDayBtn.addEventListener("click", () => {
+  nextDayBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
     currentDateISO = addDaysISO(currentDateISO, +1);
     rerenderToday();
   });
 
-  resetTodayBtn.addEventListener("click", () => {
+  resetTodayBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
     const st = getOrCreateDayState(currentDateISO);
     st.checked = {};
     st.saved = false;
@@ -496,17 +473,16 @@ function init() {
     rerenderToday();
   });
 
-  saveDayBtn.addEventListener("click", () => {
+  saveDayBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
     const ok = saveDayIfPossible(tasks, currentDateISO, dayStatesMap);
-    // refresh stats
     const hist = loadHistory();
     renderHistory(hist);
     renderChart(hist, getSettings().chartRange);
     if (!ok) alert("Rien à enregistrer : coche au moins 1 tâche 🙂");
   });
 
-  // Settings events
-  dayChangeHourInput.addEventListener("change", () => {
+  dayChangeHourInput?.addEventListener("change", () => {
     const v = clamp(parseInt(dayChangeHourInput.value || "4", 10), 0, 23);
     settings.dayChangeHour = v;
     _settings = settings;
@@ -514,11 +490,11 @@ function init() {
     rerenderToday();
   });
 
-  hardRefreshBtn.addEventListener("click", hardRefresh);
+  hardRefreshBtn?.addEventListener("click", (e) => { e.preventDefault(); hardRefresh(); });
 
-  // Stats range buttons
   document.querySelectorAll("[data-range]").forEach(btn => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
       const r = parseInt(btn.dataset.range, 10);
       settings.chartRange = r;
       _settings = settings;
@@ -529,25 +505,22 @@ function init() {
     });
   });
 
-  clearHistoryBtn.addEventListener("click", () => {
+  clearHistoryBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
     if (!confirm("Effacer tout l’historique ?")) return;
     saveHistory([]);
     renderHistory([]);
     renderChart([], getSettings().chartRange);
   });
 
-  // First render
   rerenderToday();
 
-  // Stats initial
   const history = loadHistory();
   renderHistory(history);
   renderChart(history, settings.chartRange);
   rangeLabel.textContent = `${settings.chartRange} jours`;
 
-  // Auto save timer (sans backend, donc seulement quand la page est ouverte)
   setInterval(() => autoSaveTick(tasks, dayStatesMap), 30 * 1000);
-
   registerSW();
 }
 

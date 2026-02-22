@@ -1,7 +1,6 @@
 :root{
   --bg:#070b18;
   --card: rgba(255,255,255,.06);
-  --card2: rgba(255,255,255,.08);
   --stroke: rgba(255,255,255,.12);
   --text: rgba(255,255,255,.92);
   --muted: rgba(255,255,255,.65);
@@ -25,6 +24,9 @@ body{
   color: var(--text);
 }
 
+.hidden{ display:none !important; }
+
+/* TOPBAR */
 .topbar{
   position: sticky;
   top:0;
@@ -33,31 +35,63 @@ body{
   background: rgba(7,11,24,.6);
   border-bottom: 1px solid rgba(255,255,255,.08);
   padding: 14px 14px 10px;
-}
-
-.brand{
   display:flex;
   gap:12px;
   align-items:center;
 }
-
 .iconBtn{
   width:44px;height:44px;border-radius:16px;
   border:1px solid rgba(255,255,255,.12);
   background: rgba(255,255,255,.06);
   color: var(--text);
   font-size:18px;
+  cursor:pointer;
+}
+.topbar__title .h1{ font-weight:900; font-size:20px; }
+.topbar__title .h2{ color: var(--muted); font-size:13px; margin-top:2px; }
+
+/* DRAWER */
+.backdrop{
+  position:fixed;
+  inset:0;
+  background: rgba(0,0,0,.45);
+  z-index:19;
+}
+.drawer{
+  position:fixed;
+  top:0; left:0;
+  width: 280px;
+  height: 100vh;
+  background: rgba(10,14,30,.92);
+  border-right: 1px solid rgba(255,255,255,.10);
+  backdrop-filter: blur(14px);
+  z-index:20;
+  padding: 14px;
+}
+.drawer__title{
+  font-weight:900;
+  margin: 6px 0 12px;
+  color: var(--text);
+}
+.drawer__item{
+  width:100%;
+  text-align:left;
+  padding: 12px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.05);
+  color: var(--text);
+  font-weight:800;
+  cursor:pointer;
+  margin-bottom:10px;
 }
 
-.title{ font-weight:800; font-size:20px; letter-spacing:.2px; }
-.subtitle{ color: var(--muted); font-size:13px; margin-top:2px; }
-
+/* TABS */
 .tabs{
   display:flex;
   gap:8px;
-  margin-top:10px;
+  padding: 10px 14px 0;
 }
-
 .tab{
   flex:1;
   border-radius:14px;
@@ -65,22 +99,20 @@ body{
   background: rgba(255,255,255,.05);
   color: var(--text);
   padding:10px 10px;
-  font-weight:700;
+  font-weight:800;
   cursor:pointer;
 }
-.tab.isActive{
+.tab.active{
   border-color: rgba(123,124,255,.35);
   background: linear-gradient(90deg, rgba(119,226,255,.18), rgba(123,124,255,.18));
 }
 
+/* LAYOUT */
 .container{
   max-width: 980px;
   margin: 18px auto 70px;
   padding: 0 14px;
 }
-
-.page{ display:none; }
-.page.isActive{ display:block; }
 
 .card{
   border-radius: var(--r);
@@ -91,36 +123,35 @@ body{
   margin: 14px 0;
 }
 
-.h2{
-  margin:0;
-  font-size:20px;
-  font-weight:900;
+.muted{ color: var(--muted); }
+.pill{
+  padding:8px 12px;
+  border-radius: 999px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.05);
+  color: var(--muted);
+  font-weight:800;
+  display:inline-block;
 }
 
-.muted{ color: var(--muted); }
-.hint{ margin-top:12px; color: var(--muted); font-size:13px; line-height:1.3; }
-
-.row{ display:flex; align-items:center; }
-.between{ justify-content:space-between; }
-.wrap{ flex-wrap:wrap; }
-.gap{ gap:10px; }
-
-.spacer{ height:12px; }
-.divider{ height:1px; background: rgba(255,255,255,.10); margin: 14px 0; }
-
+.kpiGrid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:14px;
+}
 .kpiLabel{ color: var(--muted); font-size:13px; }
 .kpiValue{ font-size:42px; font-weight:900; letter-spacing:-.5px; }
-.kpiUnit{ font-size:16px; font-weight:700; color: var(--muted); margin-left:6px; }
+.kpiUnit{ font-size:16px; font-weight:800; color: var(--muted); margin-left:6px; }
 
-.levelBox{
+.levelRow{
   display:flex;
   align-items:center;
-  gap:10px;
+  gap:12px;
+  margin-top: 12px;
   padding:10px 12px;
   border-radius:18px;
   border:1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.05);
-  min-width: 230px;
 }
 .levelImg{
   width:52px; height:52px;
@@ -131,15 +162,8 @@ body{
 }
 .levelLabel{ font-weight:900; font-size:18px; }
 
-.pill{
-  padding:8px 12px;
-  border-radius: 999px;
-  border:1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.05);
-  color: var(--muted);
-  font-weight:700;
-}
-
+/* BUTTONS */
+.btnRow{ display:flex; gap:10px; margin-top:12px; }
 .btn{
   border:none;
   border-radius: 16px;
@@ -149,24 +173,25 @@ body{
   color: #06101d;
   background: linear-gradient(90deg, var(--brand1), var(--brand2));
 }
-.btn.small{ padding: 8px 10px; border-radius: 12px; font-size:13px; }
 .btn.ghost{
   color: var(--text);
   border:1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.05);
 }
-.btn.ghost.isActive{
-  border-color: rgba(119,226,255,.35);
-  background: rgba(119,226,255,.10);
+.btn.primary{ }
+.btn.tiny{
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size:13px;
 }
-.btn.ghost.danger{
-  border-color: rgba(255,92,108,.30);
+.btn.danger{
+  color: var(--text);
+  border:1px solid rgba(255,92,108,.30);
   background: rgba(255,92,108,.10);
 }
 
-.tasks{ display:flex; flex-direction:column; gap:10px; margin-top:10px; }
-
-.task{
+/* TASKS */
+.taskRow{
   display:flex;
   align-items:center;
   justify-content:space-between;
@@ -175,19 +200,17 @@ body{
   border-radius: 18px;
   border:1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.05);
+  margin-top: 10px;
 }
-
 .taskLeft{
   display:flex;
   gap:10px;
-  align-items:flex-start;
+  align-items:center;
 }
-.taskLeft input{ width:22px; height:22px; margin-top:3px; }
-
+.taskLeft input{ width:22px; height:22px; }
 .taskTitle{ font-weight:900; font-size:16px; }
-.taskMeta{ color: var(--muted); font-size:12px; margin-top:2px; }
 
-.badge{
+.taskBadge{
   padding: 10px 12px;
   border-radius: 16px;
   font-weight:900;
@@ -195,63 +218,42 @@ body{
   text-align:center;
   border:1px solid rgba(255,255,255,.10);
 }
-.badge.pos{ background: rgba(72,255,181,.12); color: rgba(72,255,181,.95); border-color: rgba(72,255,181,.22); }
-.badge.neg{ background: rgba(255,92,108,.12); color: rgba(255,92,108,.95); border-color: rgba(255,92,108,.22); }
+.taskBadge.pos{ background: rgba(72,255,181,.12); color: rgba(72,255,181,.95); border-color: rgba(72,255,181,.22); }
+.taskBadge.neg{ background: rgba(255,92,108,.12); color: rgba(255,92,108,.95); border-color: rgba(255,92,108,.22); }
 
-.datePick{
+/* Cards titles */
+.cardTitleRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+.cardTitle{ font-weight:900; font-size:18px; }
+
+.pillRow{
   display:flex;
   gap:10px;
   align-items:center;
-  padding:10px 12px;
-  border-radius: 16px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.05);
-  color: var(--muted);
-  font-weight:800;
-}
-.datePick input{
-  background: transparent;
-  border:none;
-  color: var(--text);
-  font-weight:900;
+  margin-top:10px;
+  flex-wrap:wrap;
 }
 
+/* CHART */
 .chartWrap{
   margin-top: 12px;
   height: 320px;
 }
 
-.history{ display:flex; flex-direction:column; gap:10px; }
+/* HISTORY */
 .historyItem{
   padding: 12px 12px;
   border-radius: 16px;
   border:1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.05);
-}
-.historyTop{ display:flex; justify-content:space-between; gap:10px; }
-.historyTitle{ font-weight:900; }
-.historySub{ color: var(--muted); margin-top:3px; font-size:13px; }
-
-.historyTable{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-.historyRow{
-  display:grid;
-  grid-template-columns: 110px 1fr 90px 90px;
-  gap:10px;
-  align-items:center;
-  padding: 10px 12px;
-  border-radius: 16px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.05);
-}
-@media (max-width: 520px){
-  .historyRow{ grid-template-columns: 1fr 70px 70px; }
-  .historyRow .lvl{ display:none; }
+  margin-top:10px;
 }
 
+/* SETTINGS */
 .settingRow{
   display:flex;
   align-items:center;
@@ -260,7 +262,7 @@ body{
   padding: 12px 0;
 }
 .settingTitle{ font-weight:900; }
-.num{
+.input{
   width:84px;
   padding: 10px 10px;
   border-radius: 14px;
@@ -268,72 +270,4 @@ body{
   background: rgba(255,255,255,.05);
   color: var(--text);
   font-weight:900;
-}
-
-.toast{
-  position: fixed;
-  left: 14px;
-  right: 14px;
-  bottom: 14px;
-  border-radius: 18px;
-  padding: 12px 12px;
-  background: rgba(15,20,40,.88);
-  border: 1px solid rgba(255,255,255,.12);
-  box-shadow: var(--shadow);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-}
-function setupNavigation() {
-  const $ = (s) => document.querySelector(s);
-
-  const tabToday = $("#tabToday");
-  const tabStats = $("#tabStats");
-  const tabSettings = $("#tabSettings");
-
-  const pageToday = $("#pageToday");
-  const pageStats = $("#pageStats");
-  const pageSettings = $("#pageSettings");
-
-  const menuBtn = $("#menuBtn");     // le bouton "3 traits"
-  const drawer = $("#drawer");       // le menu latéral
-  const drawerOverlay = $("#drawerOverlay"); // le voile noir derrière le menu
-
-  const allPages = [pageToday, pageStats, pageSettings].filter(Boolean);
-  const allTabs = [tabToday, tabStats, tabSettings].filter(Boolean);
-
-  function showPage(which) {
-    allPages.forEach(p => p.classList.add("hidden"));
-    allTabs.forEach(t => t.classList.remove("active"));
-
-    if (which === "today")   { pageToday?.classList.remove("hidden"); tabToday?.classList.add("active"); }
-    if (which === "stats")   { pageStats?.classList.remove("hidden"); tabStats?.classList.add("active"); }
-    if (which === "settings"){ pageSettings?.classList.remove("hidden"); tabSettings?.classList.add("active"); }
-
-    // ferme le menu si ouvert
-    drawer?.classList.remove("open");
-    drawerOverlay?.classList.remove("show");
-  }
-
-  function toggleDrawer() {
-    const isOpen = drawer?.classList.contains("open");
-    if (isOpen) {
-      drawer?.classList.remove("open");
-      drawerOverlay?.classList.remove("show");
-    } else {
-      drawer?.classList.add("open");
-      drawerOverlay?.classList.add("show");
-    }
-  }
-
-  tabToday?.addEventListener("click", (e) => { e.preventDefault(); showPage("today"); });
-  tabStats?.addEventListener("click", (e) => { e.preventDefault(); showPage("stats"); });
-  tabSettings?.addEventListener("click", (e) => { e.preventDefault(); showPage("settings"); });
-
-  menuBtn?.addEventListener("click", (e) => { e.preventDefault(); toggleDrawer(); });
-  drawerOverlay?.addEventListener("click", (e) => { e.preventDefault(); toggleDrawer(); });
-
-  // Par défaut
-  showPage("today");
 }
