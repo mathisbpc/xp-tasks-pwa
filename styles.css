@@ -285,3 +285,55 @@ body{
   justify-content:space-between;
   gap:10px;
 }
+function setupNavigation() {
+  const $ = (s) => document.querySelector(s);
+
+  const tabToday = $("#tabToday");
+  const tabStats = $("#tabStats");
+  const tabSettings = $("#tabSettings");
+
+  const pageToday = $("#pageToday");
+  const pageStats = $("#pageStats");
+  const pageSettings = $("#pageSettings");
+
+  const menuBtn = $("#menuBtn");     // le bouton "3 traits"
+  const drawer = $("#drawer");       // le menu latéral
+  const drawerOverlay = $("#drawerOverlay"); // le voile noir derrière le menu
+
+  const allPages = [pageToday, pageStats, pageSettings].filter(Boolean);
+  const allTabs = [tabToday, tabStats, tabSettings].filter(Boolean);
+
+  function showPage(which) {
+    allPages.forEach(p => p.classList.add("hidden"));
+    allTabs.forEach(t => t.classList.remove("active"));
+
+    if (which === "today")   { pageToday?.classList.remove("hidden"); tabToday?.classList.add("active"); }
+    if (which === "stats")   { pageStats?.classList.remove("hidden"); tabStats?.classList.add("active"); }
+    if (which === "settings"){ pageSettings?.classList.remove("hidden"); tabSettings?.classList.add("active"); }
+
+    // ferme le menu si ouvert
+    drawer?.classList.remove("open");
+    drawerOverlay?.classList.remove("show");
+  }
+
+  function toggleDrawer() {
+    const isOpen = drawer?.classList.contains("open");
+    if (isOpen) {
+      drawer?.classList.remove("open");
+      drawerOverlay?.classList.remove("show");
+    } else {
+      drawer?.classList.add("open");
+      drawerOverlay?.classList.add("show");
+    }
+  }
+
+  tabToday?.addEventListener("click", (e) => { e.preventDefault(); showPage("today"); });
+  tabStats?.addEventListener("click", (e) => { e.preventDefault(); showPage("stats"); });
+  tabSettings?.addEventListener("click", (e) => { e.preventDefault(); showPage("settings"); });
+
+  menuBtn?.addEventListener("click", (e) => { e.preventDefault(); toggleDrawer(); });
+  drawerOverlay?.addEventListener("click", (e) => { e.preventDefault(); toggleDrawer(); });
+
+  // Par défaut
+  showPage("today");
+}

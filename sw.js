@@ -1,20 +1,18 @@
-/* =========================================================
-   XP Tasks PWA - sw.js
-   Version: 6.2 (cache bust)
-   ========================================================= */
-
-const CACHE_NAME = "xp-tasks-cache-v6.2";
+/* XP Tasks - Service Worker */
+const SW_VERSION = "7.0.0";
+const CACHE_NAME = `xp-tasks-cache-${SW_VERSION}`;
 
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=6.2",
-  "./app.js?v=6.2",
+  "./styles.css?v=7.0.0",
+  "./app.js?v=7.0.0",
   "./manifest.webmanifest",
 
   "./assets/icon-192.png",
   "./assets/icon-512.png",
 
+  // Tes images de niveaux (nouveaux noms)
   "./assets/lvl1_larve.png",
   "./assets/lvl2_larve_disciplinee.png",
   "./assets/lvl3_soldat.png",
@@ -23,7 +21,7 @@ const ASSETS = [
   "./assets/lvl6_apothicaaire.png",
   "./assets/lvl7_samurai.png",
   "./assets/lvl8_reussite.png",
-  "./assets/lvl9_dieu.png",
+  "./assets/lvl9_dieu.png"
 ];
 
 self.addEventListener("install", (event) => {
@@ -36,25 +34,37 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : null)));
+    await Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : Promise.resolve())));
     await self.clients.claim();
   })());
 });
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
+
+  // Toujours réseau pour HTML (évite de rester coincé sur une vieille version)
+  if (req.mode === "navigate") {
+    event.respondWith((async () => {
+      try {
+        const fresh = await fetch(req, { cache: "no-store" });
+        const cache = await caches.open(CACHE_NAME);
+        cache.put("./", fresh.clone());
+        return fresh;
+      } catch {
+        const cached = await caches.match("./");
+        return cached || Response.error();
+      }
+    })());
+    return;
+  }
+
+  // Cache-first pour le reste
   event.respondWith((async () => {
-    // cache-first pour fichiers
     const cached = await caches.match(req);
     if (cached) return cached;
-
-    try {
-      const fresh = await fetch(req);
-      return fresh;
-    } catch (e) {
-      // fallback index si offline
-      const fallback = await caches.match("./index.html");
-      return fallback || new Response("Offline", { status: 503 });
-    }
+    const res = await fetch(req);
+    const cache = await caches.open(CACHE_NAME);
+    cache.put(req, res.clone());
+    return res;
   })());
 });

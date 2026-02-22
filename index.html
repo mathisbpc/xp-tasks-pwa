@@ -2,184 +2,161 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="theme-color" content="#0b1020" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>XP Tasks</title>
 
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" href="./assets/icon-192.png" />
   <link rel="apple-touch-icon" href="./assets/icon-192.png" />
 
-  <title>XP Tasks</title>
-  <link rel="stylesheet" href="./styles.css?v=7.0.0" />
+  <link rel="stylesheet" href="./styles.css" />
 
   <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 
 <body>
+  <!-- TOP BAR -->
   <header class="topbar">
-    <div class="brand">
-      <button class="iconBtn" id="menuBtn" aria-label="Menu">☰</button>
-      <div>
-        <div class="title">XP Tasks</div>
-        <div class="subtitle">Suivi quotidien • XP • Santé • Niveaux</div>
-      </div>
+    <button id="burgerBtn" class="iconBtn" aria-label="Menu">☰</button>
+    <div class="topbar__title">
+      <div class="h1">XP Tasks</div>
+      <div class="h2">Suivi quotidien • XP • Santé • Niveaux</div>
     </div>
-
-    <nav class="tabs" id="tabs">
-      <button class="tab isActive" data-route="today">Aujourd’hui</button>
-      <button class="tab" data-route="stats">Stats</button>
-      <button class="tab" data-route="settings">Réglages</button>
-    </nav>
   </header>
 
+  <!-- DRAWER -->
+  <div id="drawerBackdrop" class="backdrop hidden"></div>
+  <aside id="drawer" class="drawer hidden" aria-hidden="true">
+    <div class="drawer__title">Menu</div>
+    <button class="drawer__item" data-go="today">Aujourd’hui</button>
+    <button class="drawer__item" data-go="stats">Stats</button>
+    <button class="drawer__item" data-go="settings">Réglages</button>
+  </aside>
+
+  <!-- TABS -->
+  <nav class="tabs">
+    <button id="tabToday" class="tab active" data-go="today">Aujourd’hui</button>
+    <button id="tabStats" class="tab" data-go="stats">Stats</button>
+    <button id="tabSettings" class="tab" data-go="settings">Réglages</button>
+  </nav>
+
   <main class="container">
-    <!-- ============ PAGE: TODAY ============ -->
-    <section class="page isActive" id="page-today">
-      <div class="card">
-        <div class="row between wrap">
-          <div class="kpi">
+
+    <!-- PAGE: TODAY -->
+    <section id="pageToday" class="page">
+      <section class="card">
+        <div class="kpiGrid">
+          <div>
             <div class="kpiLabel">XP du jour</div>
             <div class="kpiValue"><span id="xpValue">0</span> <span class="kpiUnit">XP</span></div>
           </div>
-
-          <div class="kpi">
-            <div class="kpiLabel">Santé</div>
-            <div class="kpiValue"><span id="healthValue">100</span><span class="kpiUnit">/100</span></div>
-          </div>
-
-          <div class="levelBox">
-            <img id="levelImg" class="levelImg" alt="Niveau" />
-            <div>
-              <div class="kpiLabel">Niveau</div>
-              <div class="levelLabel" id="levelLabel">—</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="spacer"></div>
-
-        <div class="row between wrap">
-          <div class="pill" id="dayPill">Jour: —</div>
-
-          <div class="row gap">
-            <button class="btn ghost" id="resetDayBtn">Réinitialiser</button>
-            <button class="btn" id="saveDayBtn">Enregistrer</button>
-          </div>
-        </div>
-
-        <div class="hint">
-          ✅ Auto-enregistrement à <strong>4h</strong> si au moins 1 tâche est cochée.  
-          (Tu peux aussi enregistrer à la main avec “Enregistrer”.)
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="row between wrap">
           <div>
-            <h2 class="h2">Tâches du jour</h2>
+            <div class="kpiLabel">Santé</div>
+            <div class="kpiValue"><span id="healthValue">100</span><span class="kpiUnit"> /100</span></div>
+          </div>
+        </div>
+
+        <div class="levelRow">
+          <img id="levelImg" class="levelImg" src="./assets/lvl1_larve.png" alt="Niveau" />
+          <div>
+            <div class="kpiLabel">Niveau</div>
+            <div class="levelLabel" id="levelLabel">Larve</div>
+          </div>
+        </div>
+
+        <div class="pill" id="todayPill">Jour: —</div>
+
+        <div class="btnRow">
+          <button id="resetTodayBtn" class="btn ghost">Réinitialiser</button>
+          <button id="saveDayBtn" class="btn primary">Enregistrer</button>
+        </div>
+
+        <div class="muted" id="autoSaveInfo">
+          ✅ Auto-enregistrement à 4h si au moins 1 tâche est cochée.
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="cardTitleRow">
+          <div>
+            <div class="cardTitle">Tâches du jour</div>
             <div class="muted">Coche → XP & Santé se mettent à jour direct.</div>
           </div>
-
-          <div class="row gap">
-            <label class="datePick">
-              <span>Date</span>
-              <input type="date" id="datePicker" />
-            </label>
-          </div>
         </div>
 
-        <div class="divider"></div>
-        <div id="tasksList" class="tasks"></div>
-      </div>
-
-      <div class="card">
-        <div class="row between wrap">
-          <h2 class="h2">Récap rapide</h2>
-          <button class="btn ghost danger" id="clearHistoryBtn">Effacer l’historique</button>
+        <div class="pillRow">
+          <div class="pill">Date</div>
+          <div class="pill" id="editDatePill">—</div>
+          <button id="prevDayBtn" class="btn tiny">◀</button>
+          <button id="nextDayBtn" class="btn tiny">▶</button>
         </div>
-        <div class="divider"></div>
-        <div id="historyList" class="history"></div>
-      </div>
+
+        <div id="tasksList"></div>
+      </section>
     </section>
 
-    <!-- ============ PAGE: STATS ============ -->
-    <section class="page" id="page-stats">
-      <div class="card">
-        <div class="row between wrap">
-          <h2 class="h2">Graphique (XP + Santé)</h2>
-          <div class="muted">7 / 30 jours</div>
+    <!-- PAGE: STATS -->
+    <section id="pageStats" class="page hidden">
+      <section class="card">
+        <div class="cardTitleRow">
+          <div class="cardTitle">Graphique (XP + Santé)</div>
+          <div class="muted" id="rangeLabel">7 jours</div>
         </div>
 
-        <div class="row gap wrap">
-          <button class="btn ghost" data-range="7">7 jours</button>
-          <button class="btn ghost isActive" data-range="30">30 jours</button>
-          <button class="btn ghost" data-range="90">90 jours</button>
+        <div class="btnRow">
+          <button class="btn tiny" data-range="7">7 jours</button>
+          <button class="btn tiny" data-range="30">30 jours</button>
+          <button class="btn tiny" data-range="90">90 jours</button>
         </div>
 
         <div class="chartWrap">
-          <canvas id="statsChart"></canvas>
+          <canvas id="chartCanvas"></canvas>
         </div>
-      </div>
+      </section>
 
-      <div class="card">
-        <h2 class="h2">Historique détaillé</h2>
-        <div class="divider"></div>
-        <div id="historyTable" class="historyTable"></div>
-      </div>
+      <section class="card">
+        <div class="cardTitleRow">
+          <div class="cardTitle">Historique détaillé</div>
+          <button id="clearHistoryBtn" class="btn danger tiny">Effacer</button>
+        </div>
+        <div id="historyList"></div>
+      </section>
     </section>
 
-    <!-- ============ PAGE: SETTINGS ============ -->
-    <section class="page" id="page-settings">
-      <div class="card">
-        <h2 class="h2">Réglages</h2>
-        <div class="divider"></div>
+    <!-- PAGE: SETTINGS -->
+    <section id="pageSettings" class="page hidden">
+      <section class="card">
+        <div class="cardTitle">Réglages</div>
 
         <div class="settingRow">
           <div>
             <div class="settingTitle">Heure de changement de journée</div>
             <div class="muted">Ex: 4h → à 03:00 tu es encore “sur la journée d’hier”.</div>
           </div>
-          <input type="number" min="0" max="23" step="1" id="cutoffHour" class="num" />
-        </div>
-
-        <div class="settingRow">
-          <div>
-            <div class="settingTitle">Notifications (sans backend)</div>
-            <div class="muted">
-              On peut faire des rappels <strong>quand l’app est ouverte</strong>.  
-              Les “vraies push” quand l’app est fermée demandent un backend (on fera plus tard).
-            </div>
-          </div>
-          <button class="btn ghost" id="notifBtn">Activer</button>
+          <input id="dayChangeHour" class="input" type="number" min="0" max="23" value="4" />
         </div>
 
         <div class="settingRow">
           <div>
             <div class="settingTitle">Forcer la mise à jour (cache)</div>
-            <div class="muted">Vide le cache SW et recharge (utile quand GitHub Pages garde l’ancienne version).</div>
+            <div class="muted">Désinstalle le SW + vide le cache puis recharge.</div>
           </div>
-          <button class="btn ghost" id="hardRefreshBtn">Hard refresh</button>
+          <button id="hardRefreshBtn" class="btn tiny">Hard refresh</button>
         </div>
-      </div>
 
-      <div class="card">
-        <h2 class="h2">Info</h2>
-        <div class="divider"></div>
-        <div class="muted">
-          Version: <strong>7.0.0</strong> • Cache SW: <strong id="swVersionLabel">—</strong>
+        <div class="settingRow">
+          <div>
+            <div class="settingTitle">Info</div>
+            <div class="muted" id="versionInfo">Version: —</div>
+          </div>
         </div>
-      </div>
+      </section>
     </section>
+
   </main>
 
-  <div class="toast" id="toast" hidden>
-    <div id="toastText">—</div>
-    <button class="btn small" id="toastBtn" hidden>OK</button>
-  </div>
-
-  <script src="./app.js?v=7.0.0"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
